@@ -1,14 +1,42 @@
 ---
-title: "00 Preface"
+title: "00"
 author: "A Solomon Kurz"
 date: "`r format(Sys.Date())`"
 output:
   github_document
 ---
 
+# Preface
+
+Newsome began the Preface with:
+
+> This book is a thorough examination of structural equation modeling (SEM) strategies for longitudinal data. SEM is an analysis approach that combines path analysis and confirma- tory factor analysis, and its ability to model complex hypotheses and account for meas- urement error creates a truly remarkable, flexible method for analyzing data collected over time. The book is intended for advanced students or researchers in behavioral and social sciences and other related fields. Throughout the book readers will find examples relevant for students and researchers in psychology, gerontology, public health, sociology, educa- tion, social work, and economics. It is appropriate as a text for a second course in SEM or as a reference for researchers conducting longitudinal research. Familiarity is assumed with basic concepts of SEM, such as path analysis confirmatory factor analysis, model identification and fit, and general structural models. (p. xvii)
+
+## Reasons for ~~writing this book~~ making this project
+
+I recently started a 2-year postdoc. The folks in my workgroup have collected a lot of longitudinal data, which they tend to analyze with either OLS methods, or longitudinal SEMs. Though I have a background in longitudinal SEM, I was a little rusty at the outset and, after looking carefully at the structure of their data sets, it became clear that some of their analyses would require me to refresh myself on some analytic strategies I was either unfamiliar with or just hadn't done in a while.
+
+In addition, I've learned through some of my [other projects](https://solomonkurz.netlify.com/bookdown/) that one of the best ways to learn is to reproduce the analyses in a text in R Markdown tutorials. The bonus, of course, is that others might then benefit from those tutorials. So this project has the dual purpose of refining my longitudinal SEM skills and perhaps helping others improve theirs, too.
+
+## Special features
+
+No comments, yet.
+
+## Outline of the ~~book~~ project
+
+At present, I plan to follow the overall flow of the book. However, I expect I'll go on occasional tangents. I suspect I'll flesh this section out a bit once I'm further along in the project.
+
+# Acknowledgments
+
+I took a lot of statistics courses during [my graduate training at the University of Mississippi](https://psychology.olemiss.edu/clinical-program/). A few of them were taught by the inimitable [John Bentley](https://pharmacy.olemiss.edu/blog/team/dr-john-p-bentley/), who I've long considered my statistical mentor. So to John, thank you for your enthusiasm and your generous spirit.
+
+Though this project is aimed at Newsom's text, I should also mention that my first comprehensive introduction to longitudinal SEM was with Todd Little's great text, [*Longitudinal Structural Equation Modeling*](https://www.guilford.com/books/Longitudinal-Structural-Equation-Modeling/Todd-Little/9781462510160). I definitely recommend you check it out.
+
+# Example Data Sets
+
 The data in this project, along with the author's Mplus and lavaan scripts, was downloaded from [http://www.longitudinalsem.com](http://www.longitudinalsem.com). Here's how to do so in code.
 
-```{r}
+```{r, eval = F}
 dir.create(path = "data")
 
 download.file(url      = "http://www.longitudinalsem.com/lsemdata.zip",
@@ -40,7 +68,7 @@ Do read her post in full to get the background, which endorses using [RStudio pr
 
 While we're at it, we might also download the lavaan files.
 
-```{r}
+```{r, eval = F}
 dir.create(path = "lavaan")
 
 download.file(url      = "http://www.longitudinalsem.com/lsemr.zip",

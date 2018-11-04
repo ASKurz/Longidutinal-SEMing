@@ -1,0 +1,61 @@
+---
+title: "00 Preface"
+author: "A Solomon Kurz"
+date: "`r format(Sys.Date())`"
+output:
+  github_document
+---
+
+The data in this project, along with the author's Mplus and lavaan scripts, was downloaded from [http://www.longitudinalsem.com](http://www.longitudinalsem.com). Here's how to do so in code.
+
+```{r}
+dir.create(path = "data")
+
+download.file(url      = "http://www.longitudinalsem.com/lsemdata.zip",
+              destfile = "data/lsemdata.zip")
+
+unzip(zipfile = "data/lsemdata.zip",
+      exdir   = "data")
+```
+
+With `dir.create()`, we made a new folder, `data`, in our working directory. We then used `download.file()` to download the data from http://www.longitudinalsem.com and save them into our new `data` folder. Since the data came in a [ZIP file](https://www.howtogeek.com/178146/htg-explains-everything-you-need-to-know-about-zipped-files/), we then used `unzip()` to extract the files from the ZIP archive. 
+
+On the site, Newsome wrote: "In Mplus, locate data in the same folder as the syntax/input file. In lavaan, replace `<your director path>` with the location of your data file in the working directory command. For example, `setwd("c:/analyses/lsem")`. Before using lavaan for the first time on any computer, you will need to run the following line: `install.packages("lavaan", dependencies=TRUE)"`. Fair warning: Some within the R community have recommended against using `setwd()`. Jenny Bryan, for example, [has made her stance clear](https://www.tidyverse.org/articles/2017/12/workflow-vs-script/):
+
+> If the first line of your R script is
+>
+> `setwd("C:\Users\jenny\path\that\only\I\have")`
+>
+> I will come into your office and SET YOUR COMPUTER ON FIRE �`r emo::ji("fire")`.
+>
+> If the first line of your R script is
+>
+> `rm(list = ls())`
+>
+> I will come into your office and SET YOUR COMPUTER ON FIRE �`r emo::ji("fire")`.
+
+Do read her post in full to get the background, which endorses using [RStudio projects](https://support.rstudio.com/hc/en-us/articles/200526207-Using-Projects) (learn more about them, [here](https://r4ds.had.co.nz/workflow-projects.html)). To be clear, I should point out that this should not be read as an arson threat from yours truly. I'm just the messenger. `r emo::ji("man_shrugging_light_skin_tone")` Back to Newsome, he gave some other helpful information in his webpage:
+
+> Data files contain the same data sets used in the text (many of the data sets are used in more than one chapter). Data were simulated to closely correspond with the mean, variances, and covariances of several real data sets. See Example Data Sets at the front of the book for additional information. Syntax files were developed using Mplus versions 7.1 - 7.3 and the lavaan R package versions 0.5-16 and 0.5-18.  All examples in the text are represented here. When variations on a particular model involve imposing constraints, only one example is given and notes on how to test the model variation are made in comments in the syntax.  Examples in lavaan code are provided where current features allow. Binary ML and latent class analysis examples are only available in Mplus, for example.  Thanks to Amanuel Zimam for help translating Mplus code to lavaan.
+
+While we're at it, we might also download the lavaan files.
+
+```{r}
+dir.create(path = "lavaan")
+
+download.file(url      = "http://www.longitudinalsem.com/lsemr.zip",
+              destfile = "lavaan/lsemr.zip")
+
+unzip(zipfile = "lavaan/lsemr.zip",
+      exdir   = "lavaan")
+```
+
+If you wanted to download the Mplus files, their url is "http://www.longitudinalsem.com/lsemmplus.zip".
+
+```{r}
+sessionInfo()
+```
+
+
+
+

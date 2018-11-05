@@ -166,6 +166,8 @@ semPaths(fitmodel1.1,
          whatLabel = "est")
 ```
 
+Learn more [here](http://www.sachaepskamp.com/files/semPlot.pdf) and [here](http://sachaepskamp.com/documentation/semPlot/semPaths.html).
+
 ```{r}
 sessionInfo()
 ```

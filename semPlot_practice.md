@@ -186,6 +186,8 @@ semPaths(fitmodel1.1,
 
 ![](semPlot_practice_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
+Learn more [here](http://www.sachaepskamp.com/files/semPlot.pdf) and [here](http://sachaepskamp.com/documentation/semPlot/semPaths.html).
+
 ``` r
 sessionInfo()
 ```

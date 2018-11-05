@@ -1,0 +1,172 @@
+---
+title: "semPlot practice"
+author: "A Solomon Kurz"
+date: "`r format(Sys.Date())`"
+output:
+  github_document
+---
+
+The purpose of this file is to practice working with the semPlot package.
+
+Load the semPlot package.
+
+```{r, warning = F, message = F}
+# install.packages("semPlot", dependencies = T)
+library(tidyverse)
+library(semPlot)
+library(lavaan)
+```
+
+Load the data.
+
+```{r, warning = F, message = F}
+socex1_names <- 
+  c("w1vst1", "w1vst2", "w1vst3", "w2vst1", "w2vst2", "w2vst3", "w3vst1", "w3vst2", "w3vst3", "w1unw1", "w1unw2", "w1unw3", "w2unw1", "w2unw2", "w2unw3", "w3unw1", "w3unw2", "w3unw3", "w1dboth","w1dsad", "w1dblues", "w1ddep", "w2dboth", "w2dsad","w2dblues", "w2ddep", "w3dboth", "w3dsad", "w3dblues", "w3ddep", "w1marr2", "w1happy", "w1enjoy", "w1satis", "w1joyful", "w1please", "w2happy", "w2enjoy", "w2satis", "w2joyful", "w2please", "w3happy", "w3enjoy", "w3satis", "w3joyful", "w3please", "w1lea", "w2lea", "w3lea")
+
+socex1 <- 
+  read_table2("data/socex1.dat",
+              col_names = F) %>% 
+  set_names(socex1_names)
+```
+
+Here's our lavaan `model1.1`.
+
+```{r}
+model1.1 <- '
+# loadings
+w1comp =~ w1vst1 + w1vst2 + w1vst3
+w2comp =~ w2vst1 + w2vst2 + w2vst3
+
+# variances and covariances
+w2comp ~~ w1comp
+w1comp ~~ w1comp
+w2comp ~~ w2comp
+w1vst1 ~~ w1vst1
+w1vst2 ~~ w1vst2
+w1vst3 ~~ w1vst3
+w2vst1 ~~ w2vst1
+w2vst2 ~~ w2vst2
+w2vst3 ~~ w2vst3
+w1vst1 ~~ w2vst1
+w1vst2 ~~ w2vst2
+w1vst3 ~~ w2vst3
+'
+
+fitmodel1.1 <- sem(model1.1, data = socex1)
+```
+
+Here's the default semPlot figure via the `semPaths()` function.
+
+```{r, fig.width = 6, fig.height = 3}
+semPaths(fitmodel1.1)
+```
+
+Here's the same plot, but using `style = "lisrel"`.
+
+```{r, fig.width = 6, fig.height = 3}
+semPaths(fitmodel1.1,
+         style = "lisrel")
+```
+
+You can rotate the diagram.
+
+```{r, fig.width = 5, fig.height = 4}
+semPaths(fitmodel1.1,
+         style = "lisrel",
+         rotation = 2)
+```
+
+You can also split up the layout of the measurement and structural models.
+
+```{r, fig.width = 5, fig.height = 3}
+semPaths(fitmodel1.1,
+         style = "lisrel",
+         layoutSplit = T,
+         rotation = 2)
+```
+
+You might darken up the line color with the `edge.color` argument and globally change the fill color with `color`. While we at it, we can get rid of the shape outlines with `borders = F`.
+
+```{r, fig.width = 5, fig.height = 3}
+semPaths(fitmodel1.1,
+         style = "lisrel",
+         layoutSplit = T,
+         rotation = 2,
+         edge.color = "black",
+         color = "grey85",
+         borders = F)
+```
+
+In addition, you might change the size of the shapes and the font of their text, like so.
+
+```{r, fig.width = 5, fig.height = 3}
+semPaths(fitmodel1.1,
+         style = "lisrel",
+         layoutSplit = T,
+         rotation = 2,
+         edge.color = "black",
+         color = "grey85",
+         sizeMan = 7,
+         sizeLat = 15,
+         label.scale = T,
+         label.cex = 1.5,
+         borders = F)
+```
+
+If you want to relable any of the variables, you might index like using `$Arguments$labels`.
+```{r, fig.width = 5, fig.height = 3}
+semPaths(fitmodel1.1)$Arguments$labels
+```
+
+Once you have a sense of the order of the elements, you can then use `nodeLabels` to specify your updated labels. You can even use mathematical notation using the `expression` function.
+```{r, fig.width = 5, fig.height = 3}
+semPaths(fitmodel1.1,
+         style = "lisrel",
+         layoutSplit = T,
+         rotation = 2,
+         edge.color = "black",
+         color = "grey85",
+         sizeMan = 7,
+         sizeLat = 15,
+         label.scale = T,
+         label.cex = 1.75,
+         borders = F,
+         nodeLabels = c(expression(y[1]), 
+                        expression(y[2]),
+                        expression(y[3]),
+                        expression(y[4]),
+                        expression(y[5]),
+                        expression(y[6]),
+                        expression(eta[1]),
+                        expression(eta[2])))
+```
+
+With the `whatLabel` argument, we can add the parameter point estimates.
+
+```{r, fig.width = 5, fig.height = 3}
+semPaths(fitmodel1.1,
+         style = "lisrel",
+         layoutSplit = T,
+         rotation = 2,
+         edge.color = "black",
+         color = "grey85",
+         sizeMan = 7,
+         sizeLat = 15,
+         label.scale = T,
+         label.cex = 1.75,
+         borders = F,
+         nodeLabels = c(expression(y[1]), 
+                        expression(y[2]),
+                        expression(y[3]),
+                        expression(y[4]),
+                        expression(y[5]),
+                        expression(y[6]),
+                        expression(eta[1]),
+                        expression(eta[2])),
+         whatLabel = "est")
+```
+
+```{r}
+sessionInfo()
+```
+

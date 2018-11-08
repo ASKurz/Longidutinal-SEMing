@@ -617,6 +617,59 @@ And yes, if you do your due diligence, you’ll notice that our `fit1.1_ec` has 
 
 ## Latent variables with binary indicators
 
+> There are two principal reasons why ordinary least squares for regression or maximum likelihood estimation for continuous variables in SEM should not be used whenever the dependent variable is binary. One reason is that a perfect relationship between a continuous predictor and the outcome probability (that $y = 1$ given $x$) is best fit to an S-shaped curve. The second reason is that the normal error distribution assumption underlying continuous regression approaches will be violated if the outcome is binary, leading to biases in the standard errors and significance tests. The same justification applies to structural equation models whenever the model includes a binary depend- ent variable for any of the paths or whenever latent variables include binary indicators. (p. 11)
+
+As we'll also see, "ith binary indicators, the means of the latent variable have a special interpretation tied to the proportions of the observed variables" (p. 12).
+
+In case it’s been a while, it might be of use to see a simple example of exactly what Newsom was talking about w/r/t the S-shaped curve.
+
+```{r}
+data()
+```
+
+
+### Threshold conceptualization
+
+### Link functions for binary variables
+
+#### Logit link function
+
+#### Probit link function
+
+### Estimation methods
+
+#### Maximum likelihood estimation
+
+#### Weighted least squares estimators
+
+### Factor variance and measurement residual variance
+
+#### ML logistic estimates
+
+#### WLSMV probit estimates
+
+### Factor means and measurement thresholds
+
+#### ML logistic estimates
+
+#### WLSMV probit estimates
+
+#### Effects coding identification
+
+#### IRT interpretation
+
+### Example 1.3: Factor means and intercepts with binary indicators
+
+### Comments
+
+## Latent variables with ordinal indicators
+
+## Other variable types
+
+## Comments
+
+## Recommended readings
+
 
 
 ## Reference {-}

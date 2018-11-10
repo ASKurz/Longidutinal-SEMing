@@ -1,0 +1,1308 @@
+---
+title: "02"
+author: "A Solomon Kurz"
+date: "`r format(Sys.Date())`"
+output:
+  github_document
+---
+
+```{r set-options_14, echo = FALSE, cache = FALSE}
+options(width = 100)
+```
+
+# Longitudinal Measurement Invariance
+
+> Any longitudinal structural model should begin with a complete understanding of the measurement properties of the latent variables used in the analysis. The objective is to ensure that measurement properties of latent variables are stable over time, termed measurement invariance, to avoid mistaking changes in measurement properties for hypothesized changes in the construct. [Millsap and Cham (2011)](https://www.guilford.com/books/Handbook-of-Developmental-Research-Methods/Laursen-Little-Card/9781462513932/reviews) more formally define longitudinal invariance as the case in which the conditional distributions of observed values are unchanging given the same latent variable values over time. (p. 27)
+
+## Nested model tests
+
+"To investigate measurement invariance, statistical tests comparing nested models are conducted to determine whether observed differences are greater than what would be expected due to chance" (p. 27).
+
+### Likelihood ratio test
+
+> The SEM approach makes possible precise statistical comparisons of parameter estimates across groups or over time through imposition of equality constraints. Comparisons should always be made using raw, unstandardized variables, because important variance infor- mation is lost if variables are standardized, potentially leading to incorrect conclusions ([Cudeck, 1989](http://www.statpower.net/Content/319SEM/Reading/Cudeck89.pdf)). Invariance tests are conducted by comparisons of nested models with and without constraints of individual or sets of parameters. Nested models, at minimum, involve the same cases and the same measured variables in the models being compared. Two models are compared that have the same structure, with one model including some restrictions on free parameters (i.e., more degrees of freedom)...
+>
+> Nested models are generally compared with a chi-square difference test, or more for- mally called a likelihood ratio test, where $\Delta \chi^2 = \chi_{M0}^2 − \chi_{M1}^2$. Model M0 is nested within M1, because additional restrictions on the parameter estimates have been made, leading to a model chi-square for M0 that will be equal to or greater than the less restricted model, M1. The difference in chi-square values is compared to the chi-square distribution using degrees of freedom equal to the difference in degrees of freedom from the two models, $\Delta df = df_{M0} − df_{M1}$. (pp. 27--28)
+
+This is all very abstract. Let’s work a quick example. Consider the [Multiple groups portion of the lavaan tutorial](http://lavaan.ugent.be/tutorial/groups.html). In the tutorial, they use the famous `HolzingerSwineford1939` data to fit a 3-factor CFA with IQ-text responses from students from two different schools, Pasteur and Grant_White. Let’s load the data.
+
+```{r, warning = F, message = F}
+library(lavaan)
+
+data(HolzingerSwineford1939)
+```
+
+The data look like this:
+
+```{r, warning = F, message = F}
+library(tidyverse)
+
+glimpse(HolzingerSwineford1939)
+```
+
+Here's their initial two-group CFA.
+
+```{r}
+HS <- '  
+visual  =~ x1 + x2 + x3
+textual =~ x4 + x5 + x6
+speed   =~ x7 + x8 + x9
+'
+
+fit_1 <- 
+  cfa(HS,
+      data = HolzingerSwineford1939,
+      group = "school")
+```
+
+Notice that last argument in the `cfa()` function, `group = "school"`. With that argument, we instructed lavaan to allow the CFA parameters to vary by `school`. Now consider an alternative model. In this model, we’ll tell lavaan to constrain the loadings to equality between the two groups. Within the `cfa()` function, we’ll do that by specifying `group.equal = c("loadings")`.
+
+```{r}
+fit_2 <- 
+  cfa(HS,
+      data = HolzingerSwineford1939,
+      group = "school",
+      group.equal = c("loadings"))
+```
+
+If you’d like, you can use the `summary()` function to examine the model parameters. But for our purposes, let’s jump straight to the relevant fit statistics with the `fitMeasures()` function.
+
+```{r}
+fitMeasures(fit_1, c("npar", "chisq", "df"))
+fitMeasures(fit_2, c("npar", "chisq", "df"))
+```
+
+Turns out that `fit_2` has 6 fewer parameters than `fit_1`. This is because among the nine indicators, `x1` through `x9`, three were fixed to 1 by lavaan default in order to define the metric for the latent variances. With our `fit_1` approach, we allowed the remaining 6 indicators to have their loadings vary by `school`. However, `fit_2` required the loadings--but no other model parameters--be equal by `school`. Thus, `fit_2` has 6 fewer parameters. It's also the case that `fit_2` is nested within `fit_1`, we can directly compare their fits with that `chisq` and `df` information.
+
+Based on the formulas from above, 
+
+* `fit_1` = M1, the less restricted model
+* `fit_2` = MO, the more restricted model which is nested in M1
+
+To make things explicit, we can arrange their model fit information in a tibble.
+
+```{r}
+nested <-
+  tibble(parameter = c("chisq", "df"),
+         M1 = fitMeasures(fit_1, c("chisq", "df")),
+         M0 = fitMeasures(fit_2, c("chisq", "df")))
+
+print(nested)
+```
+
+So to get our likelihood ratio test, we need to compute two differences: $\Delta \chi^2 = \chi_{M0}^2 − \chi_{M1}^2$ and $\Delta df = df_{M0} − df_{M1}$. Within our tibble framework, we can do that with `mutate()`.
+
+```{r}
+nested <-
+  nested %>% 
+  mutate(delta = M0 - M1)
+
+print(nested)
+```
+
+So we can use the $\chi^2$ distribution to see how impressed we should be by these differences. Recall the $\chi^2$ distribution ranges from 0 to $\infty$. In r, we can plot its density with the `dchisq()`. All we need to do is specify what range of values we'd like to evaluate that density over and what degree of freedom our $\chi^2$ distribution should take. Here we'll do so and plot the results.
+
+```{r, fig.width = 5, fig.height = 2.5}
+tibble(x = seq(from = 0, to = 30, by = .1)) %>% 
+  mutate(density = dchisq(x, df = 6)) %>% 
+  
+  ggplot(aes(x = x, ymin = 0, ymax = density)) +
+  geom_ribbon() +
+  geom_vline(xintercept = 8.19, color = "grey67", linetype = 2) +
+  ggtitle(expression(paste("Behold the ", chi[df == 6]^2, " distribution"))) +
+  coord_cartesian(xlim = 0:25) +
+  theme(panel.grid = element_blank())
+```
+
+The dashed vertical line shows where our $\Delta \chi^2$ value fell on that distribution. It’s not in the central hump, but it’s also not very far off into the right tail. Within the lavaan framework, we can use the `lavTestLRT()` function to compare the models with a formal $\chi^2$ different test.
+
+```{r}
+lavTestLRT(fit_1, fit_2)
+```
+
+That large $p$-value in the rightmost column suggests we should reject the null hypothesis that the simpler nested model, M0, fits the data substantially worse than the more complicated parent model, M1. In case you were curious, we can use the `qchisq()` function to tell us how large that value would need to be before we’d reject the null hypothesis at the $\alpha = .95$ level.
+
+```{r}
+qchisq(.95, df = 6)
+```
+
+Back to the text, we learn further that
+
+> The simple chi-square difference test is not appropriate unless data are multivariate nor- mal and standard maximum likelihood (ML) estimation is used. With the Satorra–Bentler scaled chi-square for nonnormal data or the Yuan–Bentler scaled chi-square for nonnor- mal missing data ([Yuan & Bentler, ~~2007~~ 2006](https://www.sciencedirect.com/science/article/pii/S0047259X05000928)), the chi-square difference test can be computed using the following formula ([Satorra, 2000](https://econ-papers.upf.edu/papers/395.pdf); [Satorra & Bentler, 2001](https://www.researchgate.net/publication/24063391_A_Scaled_Difference_Chi-Square_Test_Statistic_for_Moment_Structure_Analysis)):
+
+
+$$\Delta \chi_{SB}^2 = \frac{\chi_{M0}^2 - \chi_{M1}^2}{(df_{M0} scf_{M0} - df_{M1} scf_{M1}) / df_{M0} - df_{M1}}$$
+
+> The difference in chi-square values is scaled by the difference in degrees of freedom and the scaling correction factor (scf) for the two models, a weighting value based on multi-variate kurtosis used in computing the Satorra–Bentler scaled chi-square. The scf is equal to the ratio of traditional ML chi-square to the Satorra–Bentler scale chi-square for the SB model, or $\text{scf} = \chi_{ML}^2 / \chi_{SB}^2$ .1 Because the ML estimate is inflated proportionate to the ML SB amount of multivariate kurtosis, the ratio of the scf becomes larger with greater kurtosis.
+
+
+When we used the `lavTestLRT()` function, above, we used the default ML estimator. If we’d like to switch to a $\chi_{SB}^2$, we have several options available through the `method` argument. But before we can make use of them, we need to refit the models using a robust estimator. I recommend `"MLR"`.
+
+```{r}
+fit_1 <- 
+  cfa(HS,
+      data = HolzingerSwineford1939,
+      group = "school",
+      estimator = "MLR")
+
+fit_2 <- 
+  cfa(HS,
+      data = HolzingerSwineford1939,
+      group = "school",
+      group.equal = c("loadings"),
+      estimator = "MLR")
+```
+
+Now we're ready to compare the results from three robust $\chi^2$ difference tests, all derived from [Albert Satorra](https://www.barcelonagse.eu/people/satorra-albert)'s work (with and without [Peter Bentler](https://www.psych.ucla.edu/faculty/page/gisele)).
+
+```{r}
+lavTestLRT(fit_1, fit_2, method = "satorra.bentler.2001")
+lavTestLRT(fit_1, fit_2, method = "satorra.bentler.2010")
+lavTestLRT(fit_1, fit_2, method = "satorra.2000")
+```
+
+The subsetting code is a little hairy, but you can see what the scaling factors were in the two fits like this.
+
+```{r}
+fit_1@Fit@test[[2]]$scaling.factor
+fit_2@Fit@test[[2]]$scaling.factor
+```
+
+If that looks like magic, to you, execute `fit_1 %>% str()` to inspect the contents of the model fit. That might clarify where that subsetting code came from. And with a combination of `fitMeasures()` and fit subsetting, we can extract the necessary values from out fits to compute the $\chi_{SB}^2$ by hand.
+
+```{r}
+chisq_M1 <- fitMeasures(fit_1, "chisq") 
+chisq_M0 <- fitMeasures(fit_2, "chisq")
+df_M1    <- fitMeasures(fit_1, "df")
+df_M0    <- fitMeasures(fit_2, "df")
+scf_M1   <- fit_1@Fit@test[[2]]$scaling.factor
+scf_M0   <- fit_2@Fit@test[[2]]$scaling.factor
+
+(chisq_M0 - chisq_M1) / ((df_M0 * scf_M0 - df_M1 * scf_M1) / (df_M0 - df_M1))
+```
+
+If you look above, you’ll see that value corresponds to the one we computed with the `lavTestLRT()` function and the `method = "satorra.bentler.2001"` argument.
+
+### Effect size
+
+> In conducting chi-square difference tests for determining longitudinal invariance, it is important to distinguish between statistical significance and practical importance. There may be many circumstances where statistical power to detect differences is high, even for rather trivial departures from invariance. In such circumstances, researchers may choose to consider the assumption of invariance to be essentially met for practical purposes, concluding that any bias that occurs from violating invariance assumptions is of minor importance. Decisions about the magnitude of the violations will need to depend on the researcher’s knowledge about the topic, the nature of the research question, and the stand- ards of practice in the area of research, however. (p. 29)
+
+One way to assess magnitude is with 
+
+> the $w$ effect size estimate used for contingency chi-square effect size computations.
+>
+> $$w = \sqrt{\frac{\Delta \chi^2}{N (\Delta df)}}$$
+>
+> The value of $w$ is equal to $phi$ (and Pearson’s correlation coefficient) in the $2 \times 2$ contingency chi-square or Cramer’s V in the $n \times m$ case. The advantage of this index is that it can be used to reference standard conventions for small ($w = .1$), medium ($w = .3$), and large ($w = .5$) effect sizes suggested by [Cohen (1992)](http://www.bwgriffin.com/workshop/Sampling%20A%20Cohen%20tables.pdf). (pp. 29--30)
+
+Instead of exploring this with the hypothetical example in the text, let’s continue on with our example using the `HolzingerSwineford1939` data. First, we need to determine what our $N$ was.
+
+```{r}
+HolzingerSwineford1939 %>% 
+  count()
+```
+
+We already know our $\Delta \chi^2$ is about 6.6 and the $\Delta df = 6$, we can compute $w$ by hand like this.
+
+```{r}
+sqrt(6.6 / (301 * 6))
+```
+
+That's pretty tiny, isn't it?
+
+Fit indices are another way to compare effect sizes. The authors of several simulation studies (e.g., [Cheung & Rensvold, 2002](https://www.tandfonline.com/doi/abs/10.1207/S15328007SEM0902_5); [Fan & Sivo, 2009](https://www.researchgate.net/publication/238865189_Using_DGoodness-of-Fit_Indexes_in_Assessing_Mean_Structure_Invariance); [Widaman, Ferrer, & Conger. (2010)](https://www.researchgate.net/publication/43023975_Factorial_Invariance_Within_Longitudinal_Structural_Equation_Models_Measuring_the_Same_Construct_Across_Time)) 
+
+> have investigated how a variety of difference-of-fit measures perform under various conditions. Results suggest that many indices have undesirable properties, such as values that were correlated with overall fit of the model, model complexity, or expected values that were not equal to 0. (p. 31)
+
+Among these, Newsom singled out McDonald’s Centrality Index (Mc; McDonald, 1989), which is defined as
+
+$$\text{Mc} = \text{exp} \bigg[ - \frac{1}{2} \bigg( \frac{\chi^2 - df}{N - 1} \bigg) \bigg] $$
+> The difference in fit between the two models, $\Delta$Mc, can then be calculated by subtracting the Mc for M0 from the Mc for M1. Note that, in contrast to the direction of difference taken for $\Delta \chi^2$, the $\Delta$Mc is computed by subtracting the more constrained model (M0) from the less constrained model (M1), as higher values of Mc indicate better fit and the less constrained model will have a value equal to or greater than that of the more constrained model. Although a cutoff for $\Delta$Mc has been suggested ($\Delta$Mc > .02 indicating a difference; Fan & Sivo, 2009), it is important to keep in mind that the objective of the $\Delta$Mc or other differences in alternative fit measures is to gauge the magnitude of effect rather than to determine statistical significance. (p. 31)
+
+To practice, we'll compute the Mc values for each of our two `HolzingerSwineford1939` models and then compute their difference.
+
+```{r}
+n <- 301
+
+(Mc_M1 <- exp(-.5 * ((chisq_M1 - df_M1) / (n - 1))) %>% as.numeric())
+(Mc_M0 <- exp(-.5 * ((chisq_M0 - df_M0) / (n - 1))) %>% as.numeric())
+
+Mc_M1 - Mc_M0
+```
+
+And instead of doing that all by hand, you can use the `lavaan::fitMeasures()` function to compute Mc for you. Just remember that in that context, you refer to it as `"mfi"`.
+
+```{r}
+fitMeasures(fit_1, "mfi")
+fitMeasures(fit_2, "mfi")
+
+fitMeasures(fit_1, "mfi") - fitMeasures(fit_2, "mfi")
+```
+
+No matter which way we do it, the effect size for the differences in how well our two models fit is quite small.
+
+### Comments
+
+The CFI has also been recommended in some of the simulation studies. But Newsom cautioned that it might not work well when investigating invariance by intercepts and latent means. Here it is in our working example.
+
+```{r}
+fitMeasures(fit_1, "cfi")
+fitMeasures(fit_2, "cfi")
+
+fitMeasures(fit_1, "cfi") - fitMeasures(fit_2, "cfi")
+```
+
+## Invariance testing strategies
+
+> The order in which sets of parameters (e.g., loadings, measurement residuals, measurement intercepts) should be compared has been the focus of many discussions of measurement invariance (e.g., [Jöreskog, 1971](https://www.researchgate.net/publication/24061996_Simultaneous_Factor_Analysis_in_Several_Populations); [Taris, Bok, & Meijer, 1998](https://www.tandfonline.com/doi/abs/10.1080/00223989809599169); [Schmitt & Kuljanin, 2008](https://www.researchgate.net/publication/222363518_Measurement_Invariance_Review_of_Practice_and_Implications); [Vandenberg & Lance, 2000](https://www.researchgate.net/publication/234021997_A_Review_and_Synthesis_of_the_Measurement_Invariance_Literature_Suggestions_Practices_and_Recommendations_for_Organizational_Research); [Widaman & Reise, 1997](https://www.researchgate.net/publication/232590959_Exploring_the_measurement_invariance_of_psychological_instruments_Applications_in_the_substance_use_domain))...
+>
+> ... Jöreskog recommended a step that established that the same model is appropriate in each of the groups, usually referred to as *configural invariance*. Assuming configural invariance, he then recommended a progressive set of nested tests for specific groups of parameters, each tested while constraining the prior matrices to be equal: loadings, factor variances, and measurement residuals.
+>
+> Meredith ([1964](https://www.researchgate.net/publication/24061693_Notes_on_factorial_invariance), [1993](https://www.researchgate.net/publication/24063068_Measurement_Invariance_Factor_Analysis_and_Factorial_Invariance)) proposed a classification terminology for levels of measurement invariance, which is the most widely used. The terminology mirrors the classic testing concepts of parallel, tau-equivalent, and congeneric tests ([Lord & Novick, 1968](https://books.google.com/books/about/Statistical_Theories_of_Mental_Test_Scor.html?id=0nkMX_MqEQ4C)). *Weak factorial invariance* refers to the case when loadings are equal over time but intercepts, unique variances, latent means, and latent variances vary over time. *Strong factorial invariance* refers to the case when loadings and intercepts do not vary but unique variances, latent means, and latent variances vary over time. *Strict factorial invariance* involves invariant loadings, intercepts, and measurement residuals. *Structural factorial invariance* involves invariant factor means, factor variances, loadings, intercepts, and measurement residuals. (p. 32)
+
+When some--hopefully most--but not all parameters in a group are invariant, we often speak of *partial measurement invariance*
+
+"Nearly all authors suggest that invariance of measurement residuals is not required in order to proceed with substantive hypotheses about group differences in means or structural parameters" (p. 33).
+
+## Configural measurement invariance
+
+> Establishing configural invariance in the longitudinal case simply involves separate cross-sectional confirmatory factor models to establish that the measure has the same single- or multiple-factor structure at each time point (i.e., indicators load on the same factors at each wave), the model fits well at each time point, indicators load on the same factors, and loadings are all of acceptable magnitude. (p. 33)
+
+## Loadings and factor variances
+
+### Loadings
+
+Invariance by loadings, *weak factorial invariance*, is also sometimes called *metric invariance*.
+
+> When loadings for a full set of indicators are tested for invariance, the identification approaches (i.e., referent indicator identification, factor identification, or effects coding identification) are statistically equivalent. However, because factor identification, which constrains factor variances to 1, also implies that factor variances are equal, tests conducted with factor identification will only be equal to tests conducted with referent or effects coding identification if equality constraints on factor variances are included in the test. (p. 33)
+
+### Example 2.1: Loadings
+
+```{r}
+socex1_names <- 
+  c("w1vst1", "w1vst2", "w1vst3", "w2vst1", "w2vst2", "w2vst3", "w3vst1", "w3vst2", "w3vst3", "w1unw1", "w1unw2", "w1unw3", "w2unw1", "w2unw2", "w2unw3", "w3unw1", "w3unw2", "w3unw3", "w1dboth","w1dsad", "w1dblues", "w1ddep", "w2dboth", "w2dsad","w2dblues", "w2ddep", "w3dboth", "w3dsad", "w3dblues", "w3ddep", "w1marr2", "w1happy", "w1enjoy", "w1satis", "w1joyful", "w1please", "w2happy", "w2enjoy", "w2satis", "w2joyful", "w2please", "w3happy", "w3enjoy", "w3satis", "w3joyful", "w3please", "w1lea", "w2lea", "w3lea")
+
+socex1 <- 
+  read_table2("data/socex1.dat",
+              col_names = F) %>% 
+  set_names(socex1_names)
+
+head(socex1)
+```
+
+Here we’ll specify and fit the unconstrained configural invariance model and the constrained weak invariance model, `model2.0` and `model2.1`, respectively. Do note that in Newsom’s `ex2-1.R` file, he only showed code for `model2.1`. 
+
+```{r}
+# This is the unconstrained model
+model2.0 <- '
+# loadings
+w1comp =~ w1vst1 + w1vst2 + w1vst3
+w2comp =~ w2vst1 + w2vst2 + w2vst3
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+'
+
+# This is the model proposing weak invariance
+model2.1 <- '
+# loadings
+# we imposed equality constraints by the ways we named the loadings
+w1comp =~ w1vst1 + a*w1vst2 + b*w1vst3
+w2comp =~ w2vst1 + a*w2vst2 + b*w2vst3
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+'
+
+fit2.0 <- sem(model2.0, data = socex1)
+fit2.1 <- sem(model2.1, data = socex1)
+```
+
+Let’s just take a look at the `summary()` for `fit2.1`. I leave inspecting that for `fit2.0` as an exercise for the interested reader.
+
+```{r}
+summary(fit2.1, 
+        fit.measures = T,
+        rsquare = T,
+        standardized = T)
+```
+
+We'll use `lavTestLRT()` to execute the $\chi^2$ difference test.
+
+```{r}
+lavTestLRT(fit2.0, fit2.1)
+```
+
+And we'll use $\Delta$Mc to get a sense of the effect size.
+
+```{r}
+fitMeasures(fit2.0, "mfi") - fitMeasures(fit2.1, "mfi")
+```
+
+The difference was so small it was indistinguishable from zero, within rounding error.
+
+To help make this more concrete, we might use `semPlot::semPaths()` to make the path diagram.
+
+```{r, fig.width = 4, fig.height = 3, warning = F, message = F}
+library(semPlot)
+
+semPaths(fit2.1,
+         style = "lisrel",
+         edge.color = "black",
+         color = "grey85",
+         sizeMan = 8,
+         sizeLat = 16,
+         sizeLat2 = 12,
+         label.scale = T,
+         label.cex = 1.25,
+         edge.label.cex = 1.25,
+         borders = F,
+         mar = c(10, 5, 10, 5),
+         whatLabel = "est")
+```
+
+Note how the loading for `w12` on the latent variable `w1c` is the same as the loading of `w22` on the latent variable `w2c`. That's what we mean by weak factorial invariance, invariance of factor loadings across time points. 
+
+## Factor variances
+
+> Tests of the equality of factor variances should not be conducted without also imposing equality constraints on all loadings for the factor. The reason is that without simultaneous constraints on factor loadings, constraining factor variances will only force the estimates of the loadings to change in compensation ([Hancock et al., 2009](https://www.researchgate.net/publication/309108981_The_tenuousness_of_invariance_tests_within_multisample_covariance_and_mean_structure_models)). (p. 34)
+
+### Example 2.2: Factor variances
+
+The first example in the text follows the code in Newsom's `ex2-2a.R` file. Here we fit a model with unconstrained loadings, but with the latent variances constrained to equality across the two time points.
+
+```{r}
+# This is the model proposing weak invariance
+model2.2a <- '
+# loadings
+# we are freely estimating them, here
+w1comp =~ w1vst1 + w1vst2 + w1vst3
+w2comp =~ w2vst1 + w2vst2 + w2vst3
+
+# latent variances
+# the equality constraint constraints are imposed by the way we named the variances
+w1comp ~~ a*w1comp
+w2comp ~~ a*w2comp
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+'
+
+fit2.2a <- sem(model2.2a, data = socex1)
+fitMeasures(fit2.2a, c("chisq", "df", "pvalue"))
+```
+
+Just as in the text, the `fitMeasures()` output suggests the model fit the data poorly. Here's the $\chi^2$ difference test. 
+
+```{r}
+lavTestLRT(fit2.0, fit2.2a)
+```
+
+That's a pretty big difference. But the $w$ estimate might help clarify the magnitude of the difference. 
+
+```{r}
+sqrt(14.754 / (574 * 1))
+```
+
+Our $w$ suggests the difference is on the small side. Here's the $\Delta$Mc. 
+
+```{r}
+fitMeasures(fit2.0, "mfi") - fitMeasures(fit2.2a, "mfi")
+```
+
+The $\Delta$Mc is small, well below the suggested cutoff value of .02.
+
+For the second example, we use code based on Newsom's `ex2-2b.R` file. We're still specifying unconstrained loadings, yet constraining the latent variances constrained to equality across the two time points. However, this time we're using a different indicator to scale the latent variance(s).
+
+```{r}
+# This is the unconstrained model
+model2.0b <- '
+# loadings
+w1comp =~ NA*w1vst1 + w1vst2 + 1*w1vst3
+w2comp =~ NA*w2vst1 + w2vst2 + 1*w2vst3
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+'
+
+# This is the model proposing weak invariance
+model2.2b <- '
+# loadings
+# we are freely estimating them, here
+w1comp =~ NA*w1vst1 + w1vst2 + 1*w1vst3
+w2comp =~ NA*w2vst1 + w2vst2 + 1*w2vst3
+
+# latent variances
+# the equality constraint constraints are imposed by the way we named the variances
+w1comp ~~ a*w1comp
+w2comp ~~ a*w2comp
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+'
+
+fit2.0b <- sem(model2.0b, data = socex1)
+fit2.2b <- sem(model2.2b, data = socex1)
+```
+
+The fit measures are the same for the two versions of the unconstrained model.
+
+```{r}
+fitMeasures(fit2.0, c("chisq", "df", "pvalue"))
+fitMeasures(fit2.0b, c("chisq", "df", "pvalue"))
+```
+
+But now the models with the latent variances constrained to equality differ by their $\chi^2$ statistics.
+
+```{r}
+fitMeasures(fit2.2a, c("chisq", "df", "pvalue"))
+fitMeasures(fit2.2b, c("chisq", "df", "pvalue"))
+```
+
+The LRT still leads us to reject the null hypothesis of no difference in model fit after constraining the latent variances. But we might want to consult the effect sizes to get a sense of magnitude.
+
+```{r}
+lavTestLRT(fit2.0b, fit2.2b)
+```
+
+Our new $w$ is still within the small effect size range.
+
+```{r}
+sqrt(7.6843 / (574 * 1))
+```
+
+The $\Delta$Mc is still pretty small.
+
+```{r}
+fitMeasures(fit2.0b, "mfi") - fitMeasures(fit2.2b, "mfi")
+```
+
+In the middle of page 35, Newsome then pointed out what the various factor variances were in the two versions of the unconstrained model, `fit2.0` and `fit2.0b`. Let's introduce the `parameterEstimates()` function.
+
+```{r}
+parameterEstimates(fit2.0)
+```
+
+The `parameterEstimates()` function returned a data frame with summary information on all the model parameters. Because the parameter names are complex, they've been broken down into the first three columns. With a little tidyverse-style filtering, we can reduce that output to a more manageable size.
+
+```{r}
+parameterEstimates(fit2.0) %>% 
+  filter(op != "=~",
+         lhs %in% c("w1comp", "w2comp"))
+```
+
+Now we have the two latent variances and their covariance. Here's the same output for `fit2.2b`.
+
+```{r}
+parameterEstimates(fit2.0b) %>% 
+  filter(op != "=~",
+         lhs %in% c("w1comp", "w2comp")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Note how we used that last `mutate_if()` line to reduce number of decimal places in the output.
+
+> These examples illustrate that equality tests of factor variances should only be conducted when all factor loadings also are constrained to be equal over time. When all non-referent loadings are set equal in the constrained model, the chi-square is the same regardless of the referent. To demonstrate, longitudinal invariance of the companionship factor was tested again, this time by comparing a model with the factor variances con- strained to be equal to a model with non-referent loadings constrained to be equal. (p. 35)
+
+To do that, we'll use code based on Newsom's `ex2-2c.R` file.
+
+```{r}
+# This is the model proposing weak invariance
+model2.2c <- '
+# loadings
+# we are freely estimating them, here
+w1comp =~ w1vst1 + a*w1vst2 + b*w1vst3
+w2comp =~ w2vst1 + a*w2vst2 + b*w2vst3
+
+# latent variances
+# the equality constraint constraints are imposed by the way we named the variances
+w1comp ~~ c*w1comp
+w2comp ~~ c*w2comp
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+'
+
+fit2.2c <- sem(model2.2c, data = socex1)
+```
+
+This model still didn't fit the data well.
+
+```{r}
+fitMeasures(fit2.2c, c("chisq", "df", "pvalue"))
+```
+
+In this case, the less restrictive model was the one imposing weak factorial invariance, `fit2.1`, which fit the data well.
+
+```{r}
+fitMeasures(fit2.1, c("chisq", "df", "pvalue"))
+```
+
+The LRT continues to indicate we might should null hypothesis of no difference in model fit after constraining the latent variances.
+
+```{r}
+lavTestLRT(fit2.1, fit2.2c)
+```
+
+Our new $w$ estimate is square within the middle of the small effect size range.
+
+```{r}
+sqrt(25.476 / (574 * 1))
+```
+
+The $\Delta$Mc is just over Fan and Sivo's (2009) suggested threshold.
+
+```{r}
+fitMeasures(fit2.1, "mfi") - fitMeasures(fit2.2c, "mfi")
+```
+
+## Specific loading tests
+
+> Metric invariance tests that focus on only a subset of loadings are complicated by the interdependence of factor loadings and factor variances. This issue, sometimes termed the standardization problem ([Cheung & Rensvold, 1999](https://www.researchgate.net/publication/276959328_Testing_Factorial_Invariance_Across_Groups_A_Reconceptualization_and_Proposed_New_Method); [Johnson, Meade, & DuVernet, 2009](https://www.researchgate.net/publication/233307244_The_Role_of_Referent_Indicators_in_Tests_of_Measurement_Invariance)), makes it challenging to identify the source of noninvariance when the omnibus test of loadings is rejected. When only a subset of loadings are tested for invariance, the choice of referent, or how the factor is "standardized," may lead to erroneous conclusions about which specific loadings differ. As shown in Equation (1.7), any two loadings of the same factor are proportionate to one another, and, as a consequence, a test of invariance of individual loadings will also involve a test of the invariance of loading proportions.
+
+Equation 1.7, recal, showed "that any loading from one identification approach can be obtained from a simple ratio of two loadings obtained from the other identification approach" (p. 5). Here it is, again:
+
+$$\lambda_{21}' = \frac{\lambda_{21}}{\lambda_{11}}$$
+
+Various authors have proposed methods to grapple with the issue. Recently, [Cheung and Lau (2012)](https://www.researchgate.net/publication/258174087_A_Direct_Comparison_Approach_for_Testing_Measurement_Invariance) "proposed a simultaneous test of the invariance of all factor-ratios and suggested a bias-corrected bootstrap approach to significance, but this strategy requires software that can implement complex equality constraints and bootstrapping" (p. 36). Happily, R has those handled. In the next section, we'll practice.
+
+### Example 2.3: Tests of specific factor loadings
+
+Here we'll execute a simultaneous test of longitudinal invariance of the full set of factor loading ratios:
+
+* $\frac{\lambda_{52}}{\lambda_{42}} - \frac{\lambda_{21}}{\lambda_{11}} = 0$
+* $\frac{\lambda_{62}}{\lambda_{42}} - \frac{\lambda_{31}}{\lambda_{11}} = 0$
+* $\frac{\lambda_{62}}{\lambda_{52}} - \frac{\lambda_{31}}{\lambda_{21}} = 0$
+
+We'll specify those tests via extra parameters estimated via model constraints.
+
+```{r}
+model2.3 <- '
+w1comp =~ w1vst1 + (l21)*w1vst2 + (l31)*w1vst3
+w2comp =~ w2vst1 + (l52)*w2vst2 + (l62)*w2vst3
+
+# residual covariances
+w1vst1 ~~ w2vst1
+w1vst2 ~~ w2vst2
+w1vst3 ~~ w2vst3
+
+# complex model constraints
+l2diff := l52 - l21
+l3diff := l62 - l31
+l4diff := l62/l52 - l31/l21
+'
+
+fit2.3 <- 
+  sem(model2.3,
+      data = socex1,
+      # within the frequentist paradigm, loading ratio tests require bootstrapping
+      se = "bootstrap",
+      bootstrap = 1000)
+```
+
+Before we get the results, if you looked closely at Newsom’s script, you’ll notice mine had two departures. First, we included the `se = "bootstrap"`, which is currently necessary to instruct the fitting funciton `sem()` to compute bootstraped standard errors. Second, you'll also notice Newsom specified `bootstrap = 1000L`, whereas I simply used `bootstrap = 1000L`. We can use the `class()` function to understand the distinction.
+
+```{r}
+class(1000L)
+class(1000)
+```
+
+Newsom’s code treated 1000 as an integer, whereas mine defaulted to class numeric. In this case, it doesn’t matter. For more on the topic, go [here](https://r4ds.had.co.nz/vectors.html#important-types-of-atomic-vector) or [here](https://bookdown.org/rdpeng/rprogdatascience/r-nuts-and-bolts.html#numbers). Here's the model `summary()`.
+
+```{r}
+summary(fit2.3, 
+        fit.measures = T, 
+        rsquare = T, 
+        standardized = T)
+```
+
+Do note how we got information on the bootstrap draws in the `Parameter Estimates` section, just below the fit indices. But to see the bootstrap confidence intervals, we'll use the `parameterEstimates()` function. It appears a few things have changed with the lavaan syntax since Newsom's text came out. First, the `boot.ci.type` options include `"norm"`, `"basic"`, `"perc"`, and `"bca.simple"`. And as you might note from the [lavaan manual (version 0.6-3)](https://cran.r-project.org/web/packages/lavaan/lavaan.pdf), "the `"bca.simple"` option produces intervals using the adjusted bootstrap percentile (BCa) method, but with no correction for acceleration (only for bias)" (p. 86). Second the `fmi` argument now takes wither `TRUE` or `FALSE`. The default is `FALSE`.
+
+```{r}
+parameterEstimates(fit2.3, 
+                   ci = T,
+                   level = 0.95,
+                   boot.ci.type = "bca.simple",
+                   standardized = T,
+                   fmi = F)
+```
+
+With `filter()` and `select()`, we can isolate the parameters and columns of interest.
+
+```{r}
+parameterEstimates(fit2.3, 
+                   ci = T,
+                   level = 0.95,
+                   boot.ci.type = "bca.simple",
+                   standardized = T,
+                   fmi = F) %>%
+  filter(op == ":=") %>% 
+  select(label, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Another way of looking at the estimates is with a coefficient plot. One way to make one is with the combination of `geom_pointrange()` and `coord_flip()`.
+
+```{r, fig.width = 6, fig.height = 1.5}
+parameterEstimates(fit2.3, 
+                   ci = T,
+                   level = 0.95,
+                   boot.ci.type = "bca.simple",
+                   standardized = T,
+                   fmi = F) %>%
+  filter(op == ":=") %>% 
+  select(label, est, starts_with("ci")) %>% 
+  
+  ggplot(aes(x = label)) +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_pointrange(aes(y = est, ymin = ci.lower, ymax = ci.upper)) +
+  labs(title = "This is a coefficient plot",
+       x = "parameter", y = NULL) +
+  coord_flip() +
+  theme(panel.grid   = element_blank(),
+        axis.ticks.y = element_blank())
+```
+
+But anyway, whether we look at the parameter estimates in a numeric table or via a coefficient plot, all of the 95% intervals straddled zero, which means we’d fail to reject the null hypothesis of exact-zero differences.
+
+## Binary and ordinal indicators
+
+> Loading invariance tests conducted when indicators are binary or ordinal proceed in a similar fashion as when indicators are continuous. Nested tests can be conducted to compare a model with equality constraints placed on loadings over time to a model with no equality constraints imposed, assuming appropriate adjustments are made for robust ML and WLSMV chi-square difference tests ([Asparouhov & Muthén, 2006](https://www.statmodel.com/download/webnotes/webnote10.pdf)). Delta or theta parameterizations with WLSMV lead to models with identical fit and tests of invariance for loadings and factor variances.
+>
+> Proposed strategies for testing invariance with binary and ordinal indicators within the IRT framework differ somewhat from the approach used with continuous variables, because the focus is usually on evaluating tests for item difficulty and bias.
+
+To get a sense, it might be easier to break that down in a table.
+
+```{r}
+tibble(parameter = letters[1:2],
+       `IRT (with ML)` = c("discrimination", "difficulty"),
+       `theta parameterization with WLSMV` = c("item loadings", "intercepts")) %>% 
+  knitr::kable()
+```
+
+> The factor-ratio problem still applies with binary and ordinal indicators, but the approach to correctly identifying the invariant referent variable has differed with IRT applications compared with confirmatory factor analysis applications. The IRT approach has often involved multiple referents (or "anchors") with loadings for all but one indicator set to 1 (known as the "constrained baseline" or "all other" method), whereas the CFA approach has focused on alternating a single referent loading set to 1 across items (e.g., [Kim & Yoon, 2011](https://www.researchgate.net/publication/241730447_Testing_Measurement_Invariance_A_Comparison_of_Multiple-Group_Categorical_CFA_and_IRT); [Woods, 2009](https://www.researchgate.net/publication/232929898_Evaluation_of_MIMIC-Model_methods_for_DIF_testing_with_comparison_to_two-group_analysis)). The rationale for multiple referents is that the approach is less reliant on a single item that may not be invariant. (p. 37)
+
+### Example 2.4: Loading and factor invariance with binary indicators
+
+For this example, we’ll use a series of [`ifelse()`](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/ifelse) statements to transform our six indicators to dichotomous items.
+
+```{r}
+socex1 <-
+  socex1 %>% 
+  mutate(w1unw1_d = ifelse(w1unw1 == 0, 0, 1),
+         w1unw2_d = ifelse(w1unw2 == 0, 0, 1),
+         w1unw3_d = ifelse(w1unw3 == 0, 0, 1),
+         
+         w2unw1_d = ifelse(w2unw1 == 0, 0, 1),
+         w2unw2_d = ifelse(w2unw2 == 0, 0, 1),
+         w2unw3_d = ifelse(w2unw3 == 0, 0, 1))
+```
+
+Based on the code from Newsom's `ex2-4a.R` file, we'll first fit a model with no equality constraints.
+
+```{r}
+model2.4a <- '
+# loadings
+w1unw =~ 1*w1unw1_d + w1unw2_d + w1unw3_d
+w2unw =~ 1*w2unw1_d + w2unw2_d + w2unw3_d
+
+# residual covariances
+w1unw1_d ~~ w2unw1_d
+w1unw2_d ~~ w2unw2_d
+w1unw3_d ~~ w2unw3_d
+
+# intercepts
+w1unw ~ 1
+w2unw ~ 1
+
+# thresholds
+w1unw1_d | 0*t1
+w1unw2_d | t1
+w1unw3_d | t1
+
+w2unw1_d | 0*t1
+w2unw2_d | t1
+w2unw3_d | t1
+'
+
+fit2.4a <- 
+  sem(model2.4a,
+      data = socex1,
+      parameterization = "theta",
+      estimator = "WLSMV",
+      ordered = c("w1unw1_d", "w1unw2_d", "w1unw3_d",
+                  "w2unw1_d", "w2unw2_d", "w2unw3_d"))
+```
+
+Here's the `summary()`.
+
+```{r}
+summary(fit2.4a, 
+        fit.measures = T, 
+        rsquare = T, 
+        standardized = T)
+```
+
+adfs
+
+```{r}
+model2.4b <- '
+# loadings, which are now constrained
+w1unw =~ 1*w1unw1_d + a*w1unw2_d + b*w1unw3_d
+w2unw =~ 1*w2unw1_d + a*w2unw2_d + b*w2unw3_d
+
+w1unw ~~ c*w1unw
+w2unw ~~ c*w2unw
+
+# residual covariances
+w1unw1_d ~~ w2unw1_d
+w1unw2_d ~~ w2unw2_d
+w1unw3_d ~~ w2unw3_d
+
+# latent means
+w1unw ~ 1
+w2unw ~ 1
+
+# thresholds
+w1unw1_d | 0*t1
+w1unw2_d | t1
+w1unw3_d | t1
+
+w2unw1_d | 0*t1
+w2unw2_d | t1
+w2unw3_d | t1
+'
+
+fit2.4b <- 
+  sem(model2.4b,
+      data = socex1,
+      parameterization = "theta",
+      estimator = "WLSMV",
+      ordered = c("w1unw1_d", "w1unw2_d", "w1unw3_d",
+                  "w2unw1_d", "w2unw2_d", "w2unw3_d"))
+```
+
+And here's the $\Delta \chi^2$ test, suggesting our equality constraints are fine.
+
+```{r}
+lavTestLRT(fit2.4a, fit2.4b)
+```
+
+While we're at it, let's check the $\Delta$Mc.
+
+```{r}
+fitMeasures(fit2.4a, "mfi") - fitMeasures(fit2.4b, "mfi")
+```
+
+Pretty small.
+
+## Including means in invariance tests of loadings and factor variance
+
+> Finally, a number of authors recommend inclusion of mean estimates when testing for invariance of loadings or factor variances, but inclusion of mean structures does not affect the invariance tests of loadings or variances provided that no equality constraints are imposed on the intercepts or factor means. As long as the mean structure is identified using any of the aforementioned standard scaling approaches, model fit and degrees of freedom are unaffected by the inclusion of means in the estimation. (p. 38)
+
+## Measurement intercepts and factor means
+
+> Many longitudinal structural equation models will involve mean structures, and, for this reason, researchers may be interested in testing longitudinal invariance of intercepts or factor means. Measurement intercepts, rather than factor means, are usually the primary focus of invariance testing, because the usual goal is to establish that measurement properties do not change over time prior to investigating substantive hypotheses about changes or differences in the mean of the construct. Intercepts are partly a function of factor loadings, and this logically implies that tests of measurement intercept invariance will not be appropriate unless loadings are held invariant in the model. (p. 38)
+
+### Measurement intercepts
+
+> Tests of intercept invariance can be conducted with any of the three identification approaches are algebraically equivalent results, but it should be kept in mind that the factor mean identification approach, in which factor means are set to 0, implies equivalent factor means. (p. 38)
+
+### Example 2.5: Measurement intercepts
+
+Following Newsom's `ex2-5a.R` file, here's the model with weak invariance, but no constraints imposed on the mean structure. And in case it wasn't apparent, we've switched back two the original continuously-measured items.
+
+```{r}
+model2.5a <- '
+# loadings
+# we imposed equality constraints by the ways we named the loadings
+w1comp =~ w1vst1 + a*w1vst2 + b*w1vst3
+w2comp =~ w2vst1 + a*w2vst2 + b*w2vst3
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+
+# latent means
+w1comp ~ 1
+w2comp ~ 1
+
+# intercept constraints for the referent intercept identification approach
+w1vst1 ~ 0
+w2vst1 ~ 0 
+'
+
+fit2.5a <- 
+  sem(model2.5a,
+      data = socex1,
+      meanstructure = T)
+```
+
+Here's the `summary()`.
+
+```{r}
+summary(fit2.5a, 
+        fit.measures = T, 
+        rsquare = T, 
+        standardized = T)
+```
+
+So far, the model fits the data well. As pointed out in the text, adding the unconstrained mean structure yields the same fit as the model with weak invariance but without the mean structure, `fit2.1`.
+
+```{r}
+fitMeasures(fit2.5a, c("chisq", "df", "pvalue"))
+fitMeasures(fit2.1,  c("chisq", "df", "pvalue"))
+```
+
+In the next model, we impose strong invariance using parameter labels.
+
+```{r}
+model2.5b <- '
+# loadings
+# we imposed equality constraints by the ways we named the loadings
+w1comp =~ w1vst1 + a*w1vst2 + b*w1vst3
+w2comp =~ w2vst1 + a*w2vst2 + b*w2vst3
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+
+# latent means
+w1comp ~ 1
+w2comp ~ 1
+
+# intercept constraints imposed via parameter labels
+w1vst1 ~ 0*1
+w1vst2 ~ c*1
+w1vst3 ~ d*1
+
+w2vst1 ~ 0*1
+w2vst2 ~ c*1
+w2vst3 ~ d*1
+'
+
+fit2.5b <- 
+  sem(model2.5b,
+      data = socex1,
+      meanstructure = T)
+```
+
+The model continues to fit the data well.
+
+```{r}
+fitMeasures(fit2.5b, c("chisq", "df", "pvalue"))
+```
+
+The likelihood ratio test suggests strong invariance is tenable.
+
+```{r}
+lavTestLRT(fit2.5a, fit2.5b)
+```
+
+## Factor means
+
+"Comparisons of factor means belongs less in the category of measurement hypothesis tests than in the category of substantive hypothesis tests" (p. 39).
+
+### Example 2.6: Factor means
+
+Let's look a the latent mean estimates from that last model, `fit2.5b`.
+
+```{r}
+parameterEstimates(fit2.5b, 
+                   ci = T) %>% 
+  filter(op == "~1",
+         lhs %in% c("w1comp", "w2comp")) %>% 
+  select(lhs, est:ci.upper) %>% 
+  mutate_if(is.double, round, digits = 2)
+```
+
+In this example, we'll formally test whether we can consider them the same by imposing a latent mean constraint, following the code in file `ex2-6.R`.
+
+```{r}
+model2.6 <- '
+# loadings
+# we imposed equality constraints by the ways we named the loadings
+w1comp =~ w1vst1 + a*w1vst2 + b*w1vst3
+w2comp =~ w2vst1 + a*w2vst2 + b*w2vst3
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+
+# latent means constrained to equality
+w1comp ~ c*1
+w2comp ~ c*1
+
+# intercept constraints imposed via parameter labels
+w1vst1 ~ 0*1
+w1vst2 ~ d*1
+w1vst3 ~ e*1
+
+w2vst1 ~ 0*1
+w2vst2 ~ d*1
+w2vst3 ~ e*1
+'
+
+fit2.6 <- 
+  sem(model2.6,
+      data = socex1,
+      meanstructure = T)
+```
+
+The model continues to fit the data well.
+
+```{r}
+fitMeasures(fit2.6, c("chisq", "df", "pvalue"))
+```
+
+The likelihood ratio test suggests the latent means are indeed invariant across time points.
+
+```{r}
+lavTestLRT(fit2.5b, fit2.6)
+```
+
+## Specific measurement intercept tests
+
+<Insert some text>
+
+### Example 2.7: Specific measurement intercepts
+
+```{r}
+model2.7 <- '
+# loadings with parameter labels
+w1comp =~ (l11)*w1vst1 + (l21)*w1vst2 + (l31)*w1vst3
+w2comp =~ (l42)*w2vst1 + (l52)*w2vst2 + (l62)*w2vst3
+
+# setting the latent variance metric
+w1comp ~~ 1*w1comp
+
+# residual covariances
+w1vst1 ~~ w2vst1
+w1vst2 ~~ w2vst2
+w1vst3 ~~ w2vst3
+
+# latent means
+w1comp ~ 1
+w2comp ~ 1
+
+# thresholds
+# the corresponding Mplus model specification differs slightly here, but is equivalent
+w1vst1 ~ 0 
+w2vst1 ~ 0 
+
+w1vst2 ~ (t2)*1
+w1vst3 ~ (t3)*1
+w2vst2 ~ (t5)*1
+w2vst3 ~ (t6)*1
+
+
+# complex constraints for intercept ratio test;
+t52dif := t5 - t2
+t63dif := t6 - t3
+tau_ratio := t63dif - l62/l52*t52dif 
+'
+
+fit2.7 <- 
+  sem(model2.7,
+      data = socex1,
+      # within the frequentist paradigm, intercept ratio tests require bootstrapping
+      se = "bootstrap",
+      bootstrap = 1000,
+      meanstructure = T)
+```
+
+Behold the model `summary()`.
+
+```{r}
+summary(fit2.7, 
+        fit.measures = T,
+        standardized = T)
+```
+
+The model continues to fit the data well. Now we'll use `parameterEstimates()` and some follow-up wrangling to look at the intercept ratio estimates.
+
+```{r}
+parameterEstimates(fit2.7, 
+                   ci = T,
+                   level = 0.95,
+                   boot.ci.type = "bca.simple",
+                   standardized = T,
+                   fmi = F) %>%
+  filter(op == ":=") %>% 
+  select(label, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Why not look at them with a coefficient plot?
+
+```{r, fig.width = 6, fig.height = 1.5}
+parameterEstimates(fit2.7, 
+                   ci = T,
+                   level = 0.95,
+                   boot.ci.type = "bca.simple",
+                   standardized = T,
+                   fmi = F) %>%
+  filter(op == ":=") %>% 
+  select(label, est, starts_with("ci")) %>% 
+  
+  ggplot(aes(x = label)) +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_pointrange(aes(y = est, ymin = ci.lower, ymax = ci.upper)) +
+  labs(title = "This is another coefficient plot",
+       x = "parameter", y = NULL) +
+  coord_flip() +
+  theme(panel.grid   = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y  = element_text(hjust = 0))
+```
+
+"Overall, this series of tests suggests that the measurement intercepts did not differ substantially and that the factor means did differ between the two time points" (p. 40)
+
+## Binary and ordinal variables
+
+> In the case of binary or ordinal variables, tests of intercept invariance involve constraints on thresholds, and, thus, a test of the longitudinal invariance of proportions. Identification of the model requires that at least one threshold per factor be set equal to 0, that the factor mean be set equal to 0, or that effects coding constraints be used. The single occasion identification approach is also possible, with identifying constraints at only one time point as long as thresholds are held equal over time. (p. 40)
+
+> If the distance between points on the scale differs over time, any assessments of change will be illogical.
+>
+> In the context of ordinal variable categories, we need to make sure that each 1% difference in proportions between category 1 and category 2 is represented by the same units of standard deviation in their underlying $y^*$ distributions at both time points. If the scaling metric is consistent over time, then the ratio of the difference between the thresholds for any two categories, designated below by the subscripts $c$ and $c'$, of the same repeated measurement should be equal to the ratio of the standard deviations of the two $y^*$ deviations, taking into account sampling variability ([Mehta, Flay, & Neale, 2004](https://pdfs.semanticscholar.org/82ef/c88e482bf940bc5897016786b8940284bcde.pdf)). (p. 41)
+
+$\frac{\tau_{1c'} - \tau_{1c}}{\tau_{2c'} - \tau_{2c}} = \frac{sd_{y_1^*}}{sd_{y_2^*}}$
+
+This equality holds when the scaling is equal across time.
+
+### Example 2.8: Thresholds for binary indicators
+
+We've already specified the base line comparison model for this example, the one "using the referent intercept identification approach with equal loadings, equal variances, freely estimated measurement intercepts, and freely estimated factor means" (p. 41). This was `model2.4b`.
+
+```{r}
+print(model2.4b)
+```
+
+Turns out trying to `print()` the code for a lavaan model doesn't work very well. Look back up to the Example 2.4 section to review the code in a better-spaced format. Here's how we fit the model.
+
+```{r}
+fit2.4b <- 
+  sem(model2.4b,
+      data = socex1,
+      parameterization = "theta",
+      estimator = "WLSMV",
+      ordered = c("w1unw1_d", "w1unw2_d", "w1unw3_d",
+                  "w2unw1_d", "w2unw2_d", "w2unw3_d"))
+```
+
+Since we used the robust WLSMV estimator, we'll want to exmine model fit using the `"chisq.scaled"` and the corresponding `"pvalue.scaled"`.
+
+```{r}
+fitMeasures(fit2.4b, c("chisq.scaled", "df", "pvalue.scaled"))
+```
+
+Based on the code in Newsom's `ex2-8a.R` file, here's the variant of that model with the added constraint of setting the thresholds to equality across time.
+
+```{r}
+model2.8a <- '
+# loadings, which are now constrained
+w1unw =~ 1*w1unw1_d + a*w1unw2_d + b*w1unw3_d
+w2unw =~ 1*w2unw1_d + a*w2unw2_d + b*w2unw3_d
+
+w1unw ~~ c*w1unw
+w2unw ~~ c*w2unw
+
+# residual covariances
+w1unw1_d ~~ w2unw1_d
+w1unw2_d ~~ w2unw2_d
+w1unw3_d ~~ w2unw3_d
+
+# intercepts
+w1unw ~ 1
+w2unw ~ 1
+
+# thresholds
+w1unw1_d | 0*t1
+w1unw2_d | d*t1
+w1unw3_d | e*t1
+
+w2unw1_d | 0*t1
+w2unw2_d | d*t1
+w2unw3_d | e*t1
+'
+
+fit2.8a <- 
+  sem(model2.8a,
+      data = socex1,
+      parameterization = "theta",
+      estimator = "WLSMV",
+      ordered = c("w1unw1_d", "w1unw2_d", "w1unw3_d",
+                  "w2unw1_d", "w2unw2_d", "w2unw3_d"))
+```
+
+The `summary()` looks like so.
+
+```{r}
+summary(fit2.8a, 
+        fit.measures = T,
+        standardized = T)
+```
+
+If you look closely in the text, Newsom has the model fit as $\chi^2(9) = 10.604, p = .357$. But his degrees of freedom is off. The baseline model, `fit2.4b` above, has $df = 8$, which Newsom correctly displayed on page 41 of the text. Thus, the addition of two threshold constraints should increase the degrees of freedom by 2, not 1. You can also verify this by the LRT Newsom recorded: $\Delta \chi^2(2) = 1.170$, which indicates 2 degrees of freedom. While we're on the topic, here's the LRT in lavaan.
+
+```{r}
+lavTestLRT(fit2.4b, fit2.8a)
+```
+
+It’s not clear to me, at the moment, how to compute the threshold ratio tests Newsom reported on page 41. There was no corresponding syntax in his `ex2-8a.R` file and there were no other files with lavaan syntax for this example.
+
+## Measurement residuals
+
+> Tests of loading or intercept invariance may be followed by an investigation of whether measurement residuals change. These tests would nearly always proceed while holding loading and factor variances equal over time. Many authors suggest that **it is not critical to establish longitudinal invariance for measurement residuals, because use of latent variables in the analysis partitions out measurement residual variance**. Inequality of residuals over time would therefore have no impact on the equality of the loadings or the factor variances over time as their values are a remainder function of the loadings and factor variances. (p. 41. **emphasis** added)
+
+### Example 2.9: Measurement residuals
+
+If we take the comparison model as the one without a mean structure, but with invariance constraints for loadings and latent variances, that corresponds to `model2.2c`, above. That model wasn't a great fit for the data.
+
+```{r}
+fitMeasures(fit2.2c, c("chisq", "df", "pvalue", "cfi", "srmr", "rmsea"))
+```
+
+Frustratingly, Newsom’s `ex2-9.R` file doesn’t actually show the syntax necessary to impose the equality constraints on the residuals. However, we can just extend our labeling skills from earlier examples to accomplish the task.
+
+```{r}
+# This is the model proposing weak invariance
+model2.9 <- '
+# loadings
+# we are freely estimating them, here
+w1comp =~ w1vst1 + a*w1vst2 + b*w1vst3
+w2comp =~ w2vst1 + a*w2vst2 + b*w2vst3
+
+# latent variances
+# the equality constraint constraints are imposed by the way we named the variances
+w1comp ~~ c*w1comp
+w2comp ~~ c*w2comp
+
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+
+w1vst1 ~~ d*w1vst1
+w1vst2 ~~ e*w1vst2
+w1vst3 ~~ f*w1vst3
+
+w2vst1 ~~ d*w2vst1
+w2vst2 ~~ e*w2vst2
+w2vst3 ~~ f*w2vst3
+'
+
+fit2.9 <- sem(model2.9, data = socex1)
+```
+
+It appears our residual constraints made the model fit the data worse.
+
+```{r}
+fitMeasures(fit2.9, c("chisq", "df", "pvalue", "cfi", "srmr", "rmsea"))
+```
+
+We can formalize our suspicion with an LRT.
+
+
+```{r}
+lavTestLRT(fit2.2c, fit2.9)
+```
+
+Yep, we rejected the pants off that null hypothesis of exactly zero decrement in model fit. Based on the $w$ estimate, the effect size is in the small range.
+
+```{r}
+sqrt(41.226 / (574 * 3))
+```
+
+The $\Delta$Mc is well above Fan and Sivo's (2009) suggested threshold.
+
+```{r}
+fitMeasures(fit2.2c, "mfi") - fitMeasures(fit2.9, "mfi")
+```
+
+This all suggests constraining our residuals across time might lead to biased estimates.
+
+## Correlated measurement residuals
+
+> ... The covariation among measurement residuals concerns systematic variance not measurement error, as measurement error by definition is random and cannot be correlated with other phenomena. Covariation among measurement residuals may be a function of methodological artifacts, such as the fact that the same social desirability for the item affects responses at each time point, or substantive sources of variance, such as consistent responses to the sleep item on a depression measure due to an ongoing health condition. Specifying correlated measurement residuals in a model may have some impacts (although often minor) on loadings, factor variances, or measurement residual estimates. Given that longitudinal correlations among measurement residuals are likely in most cases, not including them yields an incorrect model. It is therefore advisable to test all aspects of measurement invariance while the theoretically expected covariances among measurement residuals are estimated. (p. 43)
+
+In case it wasn't clear, we included the residual covariances in all of the models in this chapter with the following model code.
+
+```{r, eval = F}
+'
+# residual covariances
+w1vst1 ~~ w2vst1 
+w1vst2 ~~ w2vst2 
+w1vst3 ~~ w2vst3
+'
+```
+
+We might term these $\theta_{14}, \theta_{25}, \text{and } \theta_{36}$.
+
+## Multiple time points
+
+All of the above methods apply to data measured across more than 2 occasions. It is possible to impose classes of equality constraints across all measurement occasions, or to do so in a pairwise fashion. The two methods have their strengths and weaknesses. Whereas testing across all occasions avoids multiple testing concerns, if invariance is found untenable, it might be difficulty to isolate the specific sources of invariance. However, one could revert to pairwise tests in such instances, or perhaps make use of modification indices via the `modindices()` function.
+
+## Second-order factor models
+
+Invariance applies to second-order CFA models, too. But before imposing constraints, make sure the higher-order structure follows configural invariance across occasions.
+
+## Consequences of noninvariance
+
+> ... The primary focus of most discussions [on violations of measurement invariance] has been on what to do when there is evidence of only partial measurement invariance (e.g., [Byrne et al., 1989](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.207.4589&rep=rep1&type=pdf)). The most common practice is to identify the particular items that may be the source of noninvariance and eliminate them. (p. 44)
+
+### Configural invariance
+
+If this happens, you might need to burrow deeper in theory. "Edwards and Wirth ([2009](http://faculty.psy.ohio-state.edu/edwards/documents/EdwardsandWirth2009.pdf), [2012](http://psycnet.apa.org/record/2012-31006-011)) explore methodology for modeling change when configural invariance is not expected theoretically" (p. 44)
+
+### Weak and strong invariance
+
+> ... Based on the understanding of parameter estimates and invariance tests developed in this chapter thus far, we can identify some likely consequences when measurement invariance assumptions are violated. When intercepts are not invariant, we can expect more serious impacts on factor means than on factor variances. When loadings are not invariant, we can expect factor variances and factor means to be impacted, because intercepts are weighted by their respective loadings in calculating the factor means. (p. 44)
+
+### Strict invariance
+
+> Strict invariance involves equal measurement residual variance over time. Most authors seem to agree that the question of whether measurement residuals are invariant is not all that central... Although strict invariance may not be used when latent variables are analyzed, items used in a composite measure need to meet the standard of strict invariance to avoid mistaken conclusions due to changes in reliability. (p. 46)
+
+## Comments
+
+"It is only sensible to test the equality of fac- tor variances after loadings have been established as invariant, and, similarly, it is only sensible to test for the equality of factor means after intercepts have been established as invariant."
+
+"If an invariant referent indicator can be identified, latent variable models may be fairly robust to changing measurement properties if loadings and intercepts are allowed to vary over time."
+
+"An issue too infrequently considered is the degree of noninvariance that is of practical importance... Supplementing likelihood ratio tests with effect size estimates can help address this uncertainty, but this is seldom seen in practice."
+
+All those quotes are taken from various paragraphs on page 47.
+
+## Recommended readings
+
+Y'all can check to book, for those.
+
+## Reference {-}
+
+[Newsom, J. T. (2015). *Longitudinal structural equation modelling: A comprehensive introduction*. London: Routledge.](http://www.longitudinalsem.com)
+
+## Session info {-}
+
+```{r}
+sessionInfo()
+```
+
+```{r, echo = F}
+rm(HolzingerSwineford1939, HS, fit_1, fit_2, nested, chisq_M1, chisq_M0, df_M1, df_M0, scf_M1, scf_M0, n, Mc_M1, Mc_M0, socex1_names, socex1, model2.0, model2.1, fit2.0, fit2.1, model2.2a, fit2.2a, model2.0b, model2.2b, fit2.0b, fit2.2b, model2.2c, fit2.2c, model2.3, fit2.3, model2.4a, fit2.4a, model2.4b, fit2.4b, model2.5a, fit2.5a, model2.5b, fit2.5b, model2.6, fit2.6, model2.7, fit2.7, model2.8a, fit2.8a, model2.9, fit2.9)
+```
+

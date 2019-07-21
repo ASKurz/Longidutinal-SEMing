@@ -1,0 +1,2270 @@
+---
+title: "07"
+author: "A Solomon Kurz"
+date: "`r format(Sys.Date())`"
+output:
+  github_document
+---
+
+```{r set-options_14, echo = FALSE, cache = FALSE}
+options(width = 100)
+```
+
+# Linear Latent Growth Curve Models
+
+> Growth curve models investigate level change in a variable over time. The two general approaches, growth curve analysis using multilevel regression (hierarchical linear modeling) and latent growth curve models using SEM, have undoubtedly become the most popular method of analyzing longitudinal data. Growth curve models, in general, represent a very flexible approach to modeling change that allows for investigation of linear and nonlinear trends and individual differences in these trends. For basic models, the two methods of estimating them are equivalent, but latent growth curve models offer some additional flexibility as well as the potential for incorporating growth curves into the general SEM framework, making it possible to investigate the relationship between latent predictor variables on growth, the effects of growth on other factors, mediational hypotheses, and modeling of parallel growth curves. (p. 171)
+
+## Latent growth curve models with observed continuous variables 
+
+### General concepts.
+
+"The goal of latent growth curve modeling is to describe the relationship between repeated measurement of a variable and some metric of time" (p. 171). 
+
+Starting simple consider the case of a single variable $y$ assessed over multiple individuals indexed by $i$ across multiple time points $t$:
+
+$$
+y_{ti} = \beta_{0i} + \beta_{1i} x_{ti} + r_{ti}.
+$$
+
+Here $\beta_{0}$ and $\beta_{1}$ are the intercepts and slopes, respectively, and they vary across individuals, as indicated by the $i$ subscripts. The residual variance is captured by $r$. We can simulate data following this for for a single case like so.
+
+```{r, warning = F, message = F}
+library(tidyverse)
+
+b0 <- 1
+b1 <- .25
+r  <- .25
+
+set.seed(1)
+d <-
+  tibble(time = 0:5,
+         b0   = b0,
+         b1   = b1,
+         r    = r) %>% 
+  mutate(y    = rnorm(n = 6, mean = b0 + b1 * time, sd = r))
+
+head(d)
+```
+
+Here we'll use the OLS-based `lm()` function to get a quick and dirty model for the data.
+
+```{r}
+fit <- lm(data = d,
+          y ~ 1 + time)
+
+summary(fit)
+```
+
+Now we have the `fit` object, we can use the `fitted()` function to derive the fitted values.
+
+```{r}
+fitted(fit)
+```
+
+We can use them to make our version of Figure 7.1.
+
+```{r, fig.width = 5, fig.height = 4}
+# add the `fitted()` values
+d <-
+  d %>% 
+  mutate(f = fitted(fit)) 
+
+# make an intermediary tibble for the annotation
+text <-
+  d %>%
+  filter(time == 3 | time == 5) %>% 
+  mutate(offset = c(-.5, .15)) %>% 
+  mutate(time = time + offset,
+         y    = ifelse(time == 2.5, (y + f) / 2, f),
+         label = c("italic(r[ti])", "hat(italic(y))[italic(ti)]"))
+
+# plot!
+d %>% 
+  ggplot(aes(x = time)) +
+  geom_point(aes(y = y)) +
+  geom_line(aes(y = f)) +
+  geom_linerange(aes(ymin = y, ymax = f),
+                 color = "grey50", linetype = 3) +
+  geom_segment(x = 2.67, xend = 2.95,
+               y = 1.95, yend = 1.95,
+               arrow = arrow(length = unit(0.15, "cm"))) +
+  geom_text(data = text,
+            aes(y = y, label = label),
+            parse = T) +
+  labs(x = expression(paste("Time (", italic(x[ti]), ")")),
+       y = expression(italic(y[ti]))) +
+  coord_cartesian(ylim = 0:3) +
+  theme(panel.grid = element_blank())
+```
+
+The figure is an attempt to show how $r_{ti} = y_{ti} - \hat y_{ti}$. Above, we already pulled the $\hat y_{ti}$ values with the `fitted()` function. We can similarly use the `residuals()` function to pull the estimates for $r_{ti}$. We might add those to the `d` data.
+
+```{r}
+d %>% 
+  select(y:f) %>% 
+  rename(y_hat = f) %>% 
+  mutate(r = residuals(fit)) %>% 
+  mutate(`y - y_hat` = y - y_hat)
+```
+
+Did you notice how our last column, `y - y_hat` ended up with the same values as in the `r` column? Yep, that’s another way of showing how the $r_{ti} = y_{ti} - \hat y_{ti}$ equation works. "The variance of these residuals can be used to quantify the degree to which there is variance within each case that is unexplained by the time variable, often described as within-person variance when cases are people" (p. 172). But so far, we've been playing with an example of only level of $i$ participants. Once we have several values for $i$ (i.e., $i = 1, 2, ..., n - 1, n$), we'll want to generalize. 
+
+> To describe the entire data set, we estimate the expected value of $y_{ti}$ at the beginning of the study, by taking the average of all the intercepts, $\gamma_{00}$, where the intercept for any given case may deviate from that average by $u_0$.
+>
+> $\beta_0 = \gamma_{00} + u_0$
+>
+> The variance of the residual, $\text{Var}(u_{0i})$, gives the variability across cases of the expected value of $y_{ti}$ at the beginning of the study assuming the above-mentioned coding of the time variable. Similarly, we could estimate the average slope by using $\gamma_{10}$ and the deviation of any individual’s slope from that average by $u_{1i}$, having variance $\text{Var}(u_{1i})$.
+>
+> $\beta_1 = \gamma_{10} + u_1$
+>
+> The variability of the intercepts and the slopes are illustrated in [our version of] Figure 7.2, a plot of a set of hypothetical linear growth curves. (pp. 172--173)
+
+```{r}
+b0 <- 1
+b1 <- .25
+r  <- .25
+
+gamma00 <- b0
+gamma10 <- b1
+
+set.seed(1)
+d <-
+  tibble(time = 0:5,
+         b0   = b0,
+         b1   = b1,
+         r    = r) %>% 
+  mutate(y    = rnorm(n = 6, mean = b0 + b1 * time, sd = r))
+
+head(d)
+```
+
+```{r}
+# how many participants would you like?
+n <- 8
+
+# define your gamma parameters
+gamma00 <- b0
+gamma10 <- b1
+
+# set the seed and simulate
+set.seed(7)
+
+d <-
+  tibble(i       = 1:n,
+         gamma00 = gamma00,
+         gamma10 = gamma10) %>% 
+  # the two `sd` values were chosen based on trial and error
+  mutate(u0      = rnorm(n, mean = 0, sd = .2),
+         u1      = rnorm(n, mean = 0, sd = .1)) %>% 
+  expand(nesting(i, gamma00, gamma10, u0, u1),
+         time = 0:5)
+
+head(d, n = 10)
+```
+
+Following the equation a little further down on page 173,
+
+$$
+y_{ti} = (\gamma_{00} + u_{0i}) + (\gamma_{10} + u_{1i}) x_{ti} + r_{ti}, 
+$$
+
+here is how we might define our $\hat y_{ti}$ values and then make the plot.
+
+```{r, fig.width = 5, fig.height = 4}
+d <-
+  d %>% 
+  mutate(y_hat = (gamma00 + u0) + (gamma10 + u1) * time)
+
+d %>% 
+  ggplot(aes(x = time, y_hat, group = i)) +
+  geom_line(alpha = 2/3) +
+  labs(x = expression(paste("Time (", italic(x[ti]), ")")),
+       y = expression(italic(y[ti]))) +
+  coord_cartesian(ylim = 0:3) +
+  theme(panel.grid = element_blank())
+```
+
+Though not explicated in this part of the text, it's worth mentioning that $u_0$ and $u_1$ follow a multivariate normal distribution, which may be expressed as
+
+$$
+\begin{bmatrix}
+u_0 \\ u_1
+\end{bmatrix} \sim \text{Normal} 
+\begin{pmatrix}
+\begin{bmatrix}
+0 \\ 0
+\end{bmatrix},
+
+\begin{bmatrix}
+\sigma_0 & \sigma_{01} \\ \sigma_{01} & \sigma_1
+\end{bmatrix}
+
+\end{pmatrix},
+$$
+
+where $\sigma_0$ and $\sigma_1$ are variances and $\sigma_{01}$ is their covariance. Since we estimated the `u0` and `u1` values independently, above, they ended up with a covariance near zero.
+
+```{r}
+d %>% 
+  group_by(i) %>% 
+  slice(1) %>%
+  ungroup() %>% 
+  select(u0:u1) %>% 
+  cov()
+```
+
+The empirical covariance is on the off-diagonal.
+
+### Latent growth curve model.
+
+As an alternative to the multilevel growth model, above, we can express the measurement model for the latent growth curve model as
+
+$$y_{ti} = \lambda_{t0} \eta_{0i} + \lambda_{t1} \eta_{1i} + \epsilon_{ti},$$
+
+where all the loadings for $\eta_{0i}$ (i.e., the $\lambda_{0t}$ values) are constrained to 1, making $\eta_{0i}$ the model constant (i.e., intercept). Bringing in familiar terms from the latent variable model, we can then substitute in an $a$ term and simplify the equation to
+
+$$y_{ti} = a_{0i} + \lambda_{t1} \eta_{1i} + \epsilon_{ti},$$
+
+In the case where the latent growth curve model is equivalent to the multilevel growth model, you then define the $\lambda_{1t}$ elements by values representing time. With the simulated example from the previous section, those would be $0, 1, 2, 3, 4,$ and $5$. The equations for the $\eta$ parameters follow the form
+
+$$
+\begin{align*}
+\eta_{0i} & = \alpha_0 + \zeta_{0i} \\
+\eta_{1i} & = \alpha_1 + \zeta_{1i}, \text{where} \\
+
+\begin{bmatrix}
+\zeta_{0i} \\ \zeta_{1i}
+\end{bmatrix} & \sim \text{Normal} 
+\begin{pmatrix}
+\begin{bmatrix}
+0 \\ 0
+\end{bmatrix},
+
+\begin{bmatrix}
+\psi_{00} & \psi_{01} \\ \psi_{01} & \psi_{11}
+\end{bmatrix}
+
+\end{pmatrix}.
+\end{align*}
+$$
+
+Thus we can express the full equation as
+
+$$
+\begin{align*}
+y_{ti} & = (\alpha_0 + \zeta_{0i}) + \lambda_{t1} (\alpha_1 + \zeta_{1i}) + \epsilon_{ti}, \; \text{where} \\
+
+\begin{bmatrix}
+\zeta_{0i} \\ \zeta_{1i}
+\end{bmatrix} & \sim \text{Normal} 
+\begin{pmatrix}
+\begin{bmatrix}
+0 \\ 0
+\end{bmatrix},
+
+\begin{bmatrix}
+\psi_{00} & \psi_{01} \\ \psi_{01} & \psi_{11}
+\end{bmatrix}
+
+\end{pmatrix}, \; \text{and} \\
+\epsilon_{ti} & \sim \text{Normal} (0, \theta_{tti}).
+\end{align*}
+$$
+
+Or more simply, we can express the latent growth model in terms of a typical SEM like
+
+$$y_{ti} = \eta_{0} + \eta_{1} \lambda_{t1} + \epsilon_{ti}.$$
+
+### Interpretation of coefficients.
+
+Whereas $a_0$ and $a_1$ are the average intercepts and slopes, respectively, $\psi_{00}$ and $\psi_{11}$ are their variances, for which greater values indicate greater heterogeneity. Recall that if variances are a difficult metric to interpret, that squaring them converts them to a standard deviation metric. The $a$ and $\psi$ parameters are also frequently referred to as *fixed* and *random* effects, respectively. 
+
+To make our data for Figure 7.4, we’ll be using the full equation for a growth model. The trickiest part is getting the variance/covariance matrix part correct for the $\zeta$s. The `rmvnorm()` function from the [mvtnorm package]() will, as the name implies, allow us to simulate multivariate normal data based on prechosen means and a variance/covariance matrix. Because the multivariate normal distribution for the $\zeta$s has a mean vector of zeros, those are easy to define.
+
+```{r}
+library(mvtnorm)
+
+mu_zeta <- c(0, 0)
+```
+
+I find it hard to think in terms of variances and covariances, we’ll just define them using standard deviations and correlations, instead. Recall that a variance $\sigma^2$ is just a standard deviation $\sigma$ squared and recall further that a covariance is the correlation between two variables, $\rho_{ij}$ multiplied by the standard deviations of those variables (i.e., $\sigma_i$ and $\sigma_j$). 
+
+```{r}
+# the sigmas (i.e., $\psi^2$)
+s <- c(.33, .33)
+
+# the correlation (i.w., $\rho_{01}$)
+r <- .5 
+
+# here's the variance/covariance matrix
+v <- 
+  matrix(c((s[1] * s[1]),     (s[2] * s[1] * r),
+           (s[2] * s[1] * r), (s[2] * s[2])),
+         nrow = 2, ncol = 2)
+```
+
+Now all we need to do is set our seed and we're ready to simulate with `rmvnorm()`.
+
+```{r}
+set.seed(7)
+d1 <- 
+  rmvnorm(n = 100, mean = mu_zeta, sigma = v) %>% 
+  data.frame() %>% 
+  set_names(str_c("zeta", 0:1))
+
+head(d1)
+```
+
+This `d1` data will be for the panel in the upper left of Figure 7.4. Note that we simulated 100 values. Use whatever $n$ you like. Before we fully flesh out `d1`, let’s go ahead and reset a couple parameters to simulate the $\zeta$s for the upper right panel. We’ll save them as `d2`.
+
+```{r}
+# redifine the sigmas (i.e., $\psi^2$)
+s <- c(.33, 1)
+
+# redefine the correlation
+r <- -.9
+
+# here's the variance/covariance matrix
+v <- 
+  matrix(c((s[1] * s[1]),     (s[2] * s[1] * r),
+           (s[2] * s[1] * r), (s[2] * s[2])),
+         nrow = 2, ncol = 2)
+
+# after setting our seed, we're ready to simulate with `rmvnorm()`
+set.seed(7)
+d2 <- 
+  rmvnorm(n = 100, mean = mu_zeta, sigma = v) %>% 
+  data.frame() %>% 
+  set_names(str_c("zeta", 0:1))
+```
+
+Since it's handy to plot both panels at once, we'll join those two data frames together. Then we'll use the rest of the equation for the multilevel growth model to make the predicted values for Economic Security based on Time.
+
+```{r}
+# the grand means
+a0 <- 1.5
+a1 <- .5
+
+# combine
+d <-
+  bind_rows(d1, d2) %>% 
+  # wrangle
+  mutate(r = str_c("r = ", c(".5", "-.9")) %>% rep(., each = 100),
+         i = rep(1:100, times = 2)) %>%
+  mutate(r = factor(r, levels = str_c("r = ", c(".5", "-.9")))) %>% 
+  expand(nesting(r, i, zeta0, zeta1),
+         time = 0:1) %>% 
+  # use the equations
+  mutate(a0 = a0,
+         a1 = a1) %>% 
+  mutate(y  = (a0 + zeta0) + (a1 + zeta1) * time)
+
+head(d)
+```
+
+We kept things simple and just referred to Economic Security as `y`. Here’s the plot.
+
+```{r, fig.width = 6, fig.height = 3}
+d %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = y, group = i),
+            size = 1/4, alpha = 1/4, color = "grey25") +
+  geom_line(aes(x = time, y = a0 + (a1 * time)),
+            size = 1.5) +
+  scale_x_continuous(breaks = NULL) +
+  scale_y_continuous("economic security", 
+                     breaks = NULL, limits = c(0, 4)) +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~r, ncol = 2)
+```
+
+The grand means (i.e., the $a$s) are depicted by the bolder lines. The thinner gray lines are the $i$-specific trajectories. We can largely reuse our `d` data to make the plots in the lower panels. All we need to do is update our $a$ parameters and redefine `y`. Then we’re ready to plot.
+
+```{r, fig.width = 6, fig.height = 3}
+d %>% 
+  mutate(a0 = 2,
+         a1 = -0.5) %>% 
+  mutate(y  = (a0 + zeta0) + (a1 + zeta1) * time) %>% 
+  
+  ggplot() +
+  geom_line(aes(x = time, y = y, group = i),
+            size = 1/4, alpha = 1/4, color = "grey25") +
+  geom_line(aes(x = time, y = a0 + (a1 * time)),
+            size = 1.5) +
+  scale_x_continuous(breaks = NULL) +
+  scale_y_continuous("economic security", 
+                     breaks = NULL, limits = c(0, 4)) +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~r, ncol = 2)
+```
+
+### Time coding.
+
+> Because we can interpret Equation (7.4) as any other regression, the intercept is the expected value for $y_{ti}$, when $x_{ti}$ equals 0. If the loadings for $\eta_1$ are specified so that they begin with 0, then the intercept mean, $a_0$, can be interpreted as the expected value or sample average of $y_{ti}$ at the first time point. (p. 176)
+
+Say we have 5 time points. Some common coding schemes are:
+
+* $0, 1, 2, 3, 4$ (i.e., the one just mentioned),
+* $-2, -1, 0, 1, 2$, which puts $a_0$ in the metric of the middle time, and
+* $-4, -3, -2, -1, 0$, which centers $a_0$ on the last time point.
+
+I'm also a frequent user of $\frac{0}{4}, \frac{1}{4}, \frac{2}{4}, \frac{3}{4}, \frac{4}{4}$, which puts $a_0$ and $a_1$ in a beginning-to-end metric.
+
+### Relation to other models.
+
+To my eye, the most interesting part of this section was the first paragraph.
+
+> It is interesting to note that if the slope factor is omitted and only a single "intercept" factor is specified with loadings equal to 1, then the model is the same as a trait factor concept used in latent state-trait models discussed in Chapter 6. Without the slope factor, the single latent variable is equally weighted by all the repeated measures, and, therefore, represents a sole underlying, stable cause of responses at every time point. Any occasion-specific variance is estimated in the measurement residual for each time point. The relation of the latent growth curve model to latent state-trait models suggests several extensions, such as incorp- orating method factors, multiple indicators at each occasion, and autoregressive processes. (p. 177)
+
+### Intraclass correlation coefficient.
+
+"The ICC is the proportion of between-group variance relative to total variance and can be calculated by a ratio of the variance of the intercept factor, Var(η0) = ψ00, to total variance" (p. 178). Within the context of the intercept-only latent growth model, it follows the formula
+
+$$
+\rho = \frac{\psi_{00}}{\psi_{00} + \text{Var}(y_{ti})} = \frac{\psi_{00}}{\psi_{00} + \theta_{(tt)}}
+$$
+
+This formula carries the assumpiton of equality of residual variances across time points "so that there is a single value for the residual, with $\text{Var}(\epsilon_{ti}) = \theta_{(tt)}$" (p. 178). In addition
+
+> using the same formula, the ICC can be computed for a model with the growth factor included, which can be called a *conditional intraclass correlation coefficient*. The latter can be interpreted as the proportion of variance between cases in the intercept (e.g., scores at baseline) relative to the total variance of $y_{ti}$ after taking into account variance due to linear change over time. (p. 178, *emphasis* in the original)
+
+### Reliability.
+
+> Another useful index that is conceptually distinguished from ICC but is closely related mathematically is the *reliability coefficient*. Reliability, in this case, does not refer to psychometric properties (although see [Kreft 1997](https://psycnet.apa.org/record/1997-05114-000) for a discussion of psychometric analyses with multilevel regression), but refers to the stability of the estimate of either the intercept or the slope. With higher reliability of the estimate, the standard error for the estimate will be smaller, indicating more precise population inferences ([Raudenbush, 1988](https://journals.sagepub.com/doi/pdf/10.3102/10769986013002085)). (p. 179, *emphasis* in the original)
+
+This version of $\rho$ for the intercept follows the form
+
+$$
+\rho = \frac{\psi_{00}}{\psi_{00} + \theta_{(tt)} / T}, 
+$$
+
+where $T$ is the number of time points. Further connecting back to the prior section, this equation implies that reliability for the intercept will be higher in models with higher ICCs. Here's the equation for the reliability of the slope:
+
+$$
+\rho_{RB} = \frac{\psi_{11}}{\psi_{11} + \theta_{(tt)} / T}, 
+$$
+
+> [McArdle and Epstein (1987)](https://www.jstor.org/stable/pdf/1130295.pdf) proposed an index of reliability that combines the estimates of variability of the intercepts, $\psi_{00}$, slopes, $\psi_{11}$, and their covariance, $\psi_{01}$. It is an occasion-specific index which can be computed using the following formula:
+>
+>$$\rho_{ME} = \frac{\psi_{00} + 2 \lambda_{t1} \psi_{01} + \lambda_{t1}^2 \psi_{11}}{ \psi_{00} + 2 \lambda_{t1} \psi_{01} + \lambda_{t1}^2 \psi_{11} + \theta_{(tt)}}$$
+>
+> The index is specific to the time point where the value of the slope loading, $\lambda_{t1}$, for a particular time point must be inserted...
+>
+> Another alternative reliability index, proposed by [Willett (1989)](https://journals.sagepub.com/doi/pdf/10.1177/001316448904900309), is specific to intercepts *or* slopes but takes into account the spacing of the time metric, based on the rationale that greater variance of the independent variable should increase reliability and power. (pp. 179--180, *emphasis* added)
+
+Within the context of $\psi_{11}$, this coefficient follows the formula
+
+$$
+\begin{align*}
+\rho_W & = \frac{\psi_{11}}{\psi_{11} + \theta_{(tt)} / SST} \\
+SST    & = \sum(t - \overline t)^2,
+\end{align*}
+$$
+
+where $t$ indexes individual time points, $\overline t$ is their mean, and $SST$ is short for the *sum of squared deviations from the mean time point*.
+
+### Comments.
+
+> In a simulation, [Rast and Hofer (2014)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4080819/pdf/nihms597036.pdf) examine power comparing $\rho_{ME}$ and $\rho_W$, and they concluded that $\rho_W$, which is based only on slope variability, is a more appropriate indicator of power to detect variability in change than $\rho_{ME}$. There is less to go on in terms of choosing between $\rho_W$ and $\rho_{RB}$. Use of $SST$ in the denominator gives exponentially increasing weight to the number of waves and the length of interval between waves (e.g., 1 year vs. 2 years) as compared with just using $T$. With equal spacing, researchers typically use arbitrary time scores for loadings of the growth curve factor rather than coding based on the original interval spacing, so it is important to take this into account if using the reliability computation based on $SST$.
+>
+> The difference between $\rho_W$ and $\rho_{RB}$ is that $\rho_{RB}$ is unconcerned with the actual time interval underlying the occasions of measurement, whereas $\rho_W$ gives heavy weight to the actual time interval. In other words, with $\rho_{RB}$, three waves are treated the same in terms of reliability whether waves are semiannual, annual, bienniel, or once every 10 years. The $\rho_W$ index, on the other hand, will show dramatically different values for reliability when the actual time interval differs (Rast & Hofer, 2014, figure 1). Underlying the Willett's conceptualization of $\rho_W$ is the implication that larger increments in actual time should afford greater sensitivity for detecting change. (p, 180)
+
+### Model fit.
+
+Given $J$ observed variables and $q$ freely-estimated parameters, the degrees fo freedom of a frequentist latent growth model are
+
+$$
+df = \frac{J (J + 1)}{2} + J - q.
+$$
+
+In the unconditional univariate growth model, $J = T$. The parameters to estimate are
+
+* $a_0$ (i.e., the mean of the intercept factor),
+* $a_1$ (i.e., the mean of the slope factor),
+* $\psi_{00}$ (i.e., the variance of the intercept factor),
+* $\psi_{11}$ (i.e., the variance of the slope factor),
+* $\psi_{01}$ (i.e., the covariance between the intercept and slope factors), and
+* $\epsilon$ (i.e., the residual variance for each of the observed variables),
+
+making $q = T + 5$. Here's how that works out when $T = 2$.
+
+```{r}
+t <- 2
+j <- t
+q <- t + 5
+
+(j * (j + 1)) / 2 + j - q
+```
+
+You need at least $T = 3$ for a positive $df$.
+
+```{r}
+t <- 3
+j <- t
+q <- t + 5
+
+(j * (j + 1)) / 2 + j - q
+```
+
+Here's what that looks like through $T = 10$.
+
+```{r, fig.width = 2.5, fig.height = 4}
+tibble(t = 1:10) %>% 
+  mutate(j = t,
+         q = t + 5) %>% 
+  mutate(df = (j * (j + 1)) / 2 + j - q) %>% 
+  
+  ggplot(aes(x = t, y = df, label = df)) +
+  geom_linerange(aes(ymin = 0, ymax = df),
+                 color = "white") +
+  geom_text() +
+  scale_x_continuous(expression(italic(T)), breaks = 1:10) +
+  scale_y_continuous(expression(italic(df)), breaks = NULL) +
+  theme(panel.grid = element_blank())
+```
+
+> Measurement residuals are usually freely estimated at each time point, allowing for *heterogeneity of variance*. By default, multilevel regression programs nearly universally assume that variances at each time point are equal. This *homogeneity of variance* assumption can be lifted in most multilevel software programs, however, given a sufficient number of variance–covariance elements to free parameters. By default, measurement residual variances in SEM software programs will estimate each measurement residual variance individually, so that heterogeneity of variances is specified by default. (p. 181, *emphasis* in the original)
+
+### Correlated measurement residuals.
+
+> Inclusion of an autoregression correlation structure will generally have little impact on the estimates of the average intercept or average slope, because the estimate of the mean at baseline (and any other chosen referent point for the intercept) or level changes over time are based on observed means rather than covariances. Variance estimates for the intercept and slope factors and their covariance may be affected by inclusion of correlated measurement residuals, however. In particular, because the estimates of the variances of the factors and their covariances are a function of the covariances among the observed variables, any estimated covariance between measurement residuals of any two observed variables will absorb some of the covariance between the growth factors. (p. 182)
+
+
+### Example 7.1: Growth curve model with observed variables .
+
+Here we load the `health` data.
+
+```{r, warning = F, message = F}
+library(tidyverse)
+
+
+health1_names <- c("age", "srh1", "srh2", "srh3", "srh4", "srh5", "srh6", "bmi1",
+"bmi2", "bmi3", "bmi4", "bmi5", "bmi6", "cesdna1", "cesdpa1", "cesdso1",
+"cesdna2", "cesdpa2", "cesdso2", "cesdna3", "cesdpa3", "cesdso3",
+"cesdna4", "cesdpa4", "cesdso4", "cesdna5", "cesdpa5", "cesdso5",
+"cesdna6", "cesdpa6", "cesdso6", "diab1", "diab2", "diab3", "diab4", "diab5", "diab6")
+
+health1 <- 
+  read_table2("data/health.dat",
+              col_names = F) %>% 
+  set_names(health1_names)
+
+glimpse(health1)
+```
+
+We'll be modeling BMI trajectories across the 5,335 participants. To get a sense of the data, here we'll sample a random 250 cases and plot their empirical trajectories.
+
+```{r, fig.width = 6, fig.height = 3}
+set.seed(7)
+
+health1 %>% 
+  sample_n(size = 250) %>% 
+  mutate(id = 1:n()) %>% 
+  select(bmi1:bmi6, id) %>% 
+  gather(key, bmi, -id) %>% 
+  mutate(time = str_remove(key, "bmi") %>% as.double()) %>% 
+  
+  ggplot(aes(x = time, y = bmi, group = id)) +
+  geom_line(size = 1/4, alpha = 1/4) +
+  theme(panel.grid = element_blank())
+```
+
+They vary a little across time, but generally appear stable within individuals and in aggregate. Time to fire up lavaan.
+
+```{r, warning = F, message = F}
+library(lavaan)
+```
+
+We get the code for the first model from Newsom's `ex7-1.a.R` file.
+
+```{r}
+model7.1a <- '  
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+'
+
+fit_7.1a <- 
+  growth(model7.1a, 
+         data = health1)
+
+summary(fit_7.1a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Our results cohere with those in the text. Here's the empirical mean for BMI at the first wave.
+
+```{r}
+mean(health1$bmi1)
+```
+
+Here's a focused summary of the model-implied slope.
+
+```{r}
+parameterestimates(fit_7.1a) %>% 
+  filter(str_detect(lhs, "s") & str_detect(op, "~1")) %>% 
+  select(lhs, op,  est, starts_with("ci.")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Here's the alternate version with time coded 0, 2, 4, 6, 8, 10.
+
+```{r}
+model7.1a_alt <- '  
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+# the only difference in the code is here
+s =~ 0*bmi1 + 2*bmi2 + 4*bmi3 + 6*bmi4 + 8*bmi5 + 10*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+'
+
+fit_7.1a_alt <- 
+  growth(model7.1a, 
+         data = health1)
+
+summary(fit_7.1a_alt, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+The fit and many of the parameter estimates are the same. Here’s a focused look at the unstandardized and standardized estimates for the slope mean.
+
+```{r}
+parameterestimates(fit_7.1a_alt) %>% 
+  filter(str_detect(lhs, "s") & str_detect(op, "~1")) %>% 
+  select(lhs, op, est, starts_with("ci.")) %>% 
+  mutate_if(is.double, round, digits = 3)
+
+standardizedsolution(fit_7.1a_alt) %>% 
+  filter(str_detect(lhs, "s") & str_detect(op, "~1")) %>% 
+  select(lhs, op, est.std, starts_with("ci.")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Returning to the original fit, `fit_7.1a`, here is a focused look at the estimates for the latent variances and their covariance.
+
+```{r}
+parameterestimates(fit_7.1a) %>% 
+  filter(str_detect(op, "~~") & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+In Figure 7.5, Newsom them displayed "a plot of predicted slopes from the model for a random sample of 20 cases" (p. 184). In footnote, he explained "plots of predicted growth curve lines are not available in most SEM software programs" (p. 210). Luckily for us, lavaan allows users to do this with the `lavPredict()` function.
+
+```{r}
+p <-
+  lavPredict(fit_7.1a) %>% 
+  data.frame()
+
+str(p)
+```
+
+In our case, it yielded a $5,335 \times 2$ array with columns `i` and `s`. Since we wanted to work within the tidyverse, we just went ahead and converted it to a data frame. Here's a look at the distributions of the estimates.
+
+```{r, fig.width = 6, fig.height = 2.5}
+p %>% 
+  gather() %>% 
+  
+  ggplot(aes(x = value)) +
+  geom_histogram() +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~key, scales = "free")
+```
+
+To get ready for the plot, we’ll sample 20 cases, add an `id` index, `expand()` the data to include `time` values, and then use the `i`, `s`, and `time` values and the model equation to compute the model-implied predicted values for BMI.
+
+```{r}
+set.seed(7)
+p <-
+  p %>% 
+  mutate(id = 1:n()) %>% 
+  sample_n(20) %>% 
+  expand(nesting(id, i, s),
+         time = c(0, 5)) %>% 
+  mutate(bmi  = i + time * s)
+
+head(p)
+```
+
+We'll do something similar to save the model-implied average trajectory.
+
+```{r}
+average <-
+  parameterestimates(fit_7.1a) %>% 
+  filter(lhs %in% c("i", "s"), str_detect(op, "~1")) %>% 
+  select(lhs, est) %>% 
+  spread(key = lhs, value = est) %>% 
+  expand(nesting(i, s),
+         time = c(0, 5)) %>% 
+  mutate(bmi = i + time * s)
+
+average
+```
+
+Finally, here's our version of Figure 7.5.
+
+```{r, fig.width = 4.5, fig.height = 3.5}
+p %>% 
+  ggplot(aes(x = time, y = bmi)) +
+  geom_line(aes(group = id), 
+            size = 1/4, color = "grey50") +
+  geom_line(data = average,
+            size = 2) +
+  coord_cartesian(ylim = 0:45) +
+  theme(panel.grid = element_blank())
+```
+
+If you look closely, you'll see our predictions are shifted up about 5 BMI-values compared to those Newsome showed in his Figure 5.7. I'm not sure where his values came from. But if you look at the intercept for his darker line in the middle, presumably his average trajectory, it's about at BMI = 23. This contradicts what he reported earlier in the text: "The mean of the intercept factor was 27.211" (p. 183).
+
+Here is the standardized estimate for $\psi_{01}$ (i.e., the correlation between the intercepts and slopes).
+
+```{r}
+standardizedsolution(fit_7.1a) %>% 
+  filter(lhs == "i" & rhs == "s") %>% 
+  select(lhs:est.std, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+"The slight negative correlation would suggest that higher baseline BMI tended to be associated with less increase in BMI over time" (p. 183).
+
+With the next model, Newsom "added autocorrelations among adjacent time points of measurement residuals  ($\epsilon_1$ with $\epsilon_2$, $\epsilon_2$ with $\epsilon_3$, etc)" (p. 183). We get the code from his `ex7-1.b.R` file.
+
+```{r}
+model7.1b <- '  
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# add adjacent correlated residuals
+bmi1 ~~ bmi2
+bmi2 ~~ bmi3
+bmi3 ~~ bmi4
+bmi4 ~~ bmi5
+bmi5 ~~ bmi6 
+'
+
+fit_7.1b <- 
+  growth(model7.1b, 
+         data = health1)
+
+summary(fit_7.1b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Our fit statistics are identical to those he reported with the exception of the SRMR. I don't know what to say. Happily, our model estimates cohere well this those in text.
+
+Based on the code from his `ex7-1.c.R` file, we can fit a model imposing heterogeneity of residual variances.
+
+```{r}
+model7.1c <- '  
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# set residuals equal for homogeneity test
+bmi1 ~~ a*bmi1
+bmi2 ~~ a*bmi2
+bmi3 ~~ a*bmi3
+bmi4 ~~ a*bmi4
+bmi5 ~~ a*bmi5
+bmi6 ~~ a*bmi6 
+'
+
+fit_7.1c <- 
+  growth(model7.1c, 
+         data = health1)
+
+summary(fit_7.1c, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Our fit continues to match the results in the text, with the exception of the SRMR. Here we use the `lavTestLRT()` function to compare `fit_7.1a` with `fit_7.1c`.
+
+```{r}
+lavTestLRT(fit_7.1a, fit_7.1c)
+```
+
+From way back in chapter 2 (p. 29), the $w$ statistic for effect sizes follows the formula
+
+$$w = \sqrt{\frac{\Delta \chi^2}{N (\Delta df)}}.$$
+
+We just computed the $\Delta \chi^2$ and $\Delta df$ values. $N$, recall, is just the number of unique cases.
+
+```{r}
+health1 %>% 
+  nrow()
+```
+
+Here's our estimate for $w$.
+
+```{r}
+sqrt(345.51 / (5335 * 5))
+```
+
+Recalling the formula for $\Delta \text{Mc}$,
+
+$$\text{Mc} = \text{exp} \bigg[ - \frac{1}{2} \bigg( \frac{\chi^2 - df}{N - 1} \bigg) \bigg], $$
+
+here's our result for $\Delta \text{Mc}$.
+
+```{r}
+chisq_M1 <- fitmeasures(fit_7.1a, "chisq") 
+chisq_M0 <- fitmeasures(fit_7.1c, "chisq")
+df_M1    <- fitmeasures(fit_7.1a, "df")
+df_M0    <- fitmeasures(fit_7.1c, "df")
+
+n <- 5335
+
+Mc_M1 <- exp(-.5 * ((chisq_M1 - df_M1) / (n - 1))) %>% as.numeric()
+Mc_M0 <- exp(-.5 * ((chisq_M0 - df_M0) / (n - 1))) %>% as.numeric()
+
+Mc_M1 - Mc_M0
+```
+
+It's unclear to me why our $w$ and $\Delta \text{Mc}$ estimates differ from those in the text.
+
+### Comments.
+
+> There are several features of the latent growth curve model that distinguish it from other longitudinal analysis methods. First, compared to trend analysis with repeated measures ANOVA, the growth curve model provides additional information. Not only do growth curve models provide information about average increase or decrease on the level of a variable over time, they also provide information about individual variation in changes. (p. 184)
+
+## Latent growth curves with binary and ordinal observed variables 
+
+> Taking the simple case of a binary outcome and the logit model, the predicted growth curve for an individual case is a logistic regression model.
+>
+> $$\text{ln} \Bigg [ \frac{P(y_{ti} = 1)}{P(y_{ti} = 0)} \Bigg ] = \eta_{0i} + \lambda_{t1} \eta_{1i}$$
+>
+> It may seem odd, however, to contemplate individual growth over a series of 0s and 1s, so it is often easier to imagine an increasing or decreasing propensity for an individual’s observed score to be equal to 1 given what we know about the other cases in the data set for any given time point. More generally, then, we can consider the individual linearized growth curve in terms of the underlying continuous variable $y^*$.
+>
+> $$y^* = \eta_{0i} + \lambda_{t1} \eta_{1i} + \epsilon_{ti}$$
+>
+> Growth can then be interpreted as an increase in the underlying continuous $y^*$ for every unit increment in time. 
+>
+> With the y* conceptualization, the logistic regression with binary variables is easily generalized to any observed variables with two or more ordinal values. (p. 185)
+
+Within the context of binary variables and logistic regression, "conceptually, at the individual case level, the probability that $y_{ti} = 1$ is an exponential function of the case-level intercept" (p. 186). This follows the formula
+
+$$
+P(y_{ti} = 1) = \frac{1}{1 + e ^{a_{0i} + \lambda_{t1} a_{1i}}}.
+$$
+
+### Example 7.2: Growth curves with binary and ordinal variables.
+
+Sadly, Newsom didn't provide us with an `ex7-2.a.R` file. We'll just have to do our best. He described the model as of
+
+> whether the respondent had diabetes or not. The model was estimated with WLSMV and delta parameterization. To identify the model and obtain an estimate of the intercept factor mean, the measurement intercept threshold for the first indicator was set to 0, a scaling constraint of 1 was placed on the $y^*$ distribution for the first indicator, the remaining thresholds for Times 2–6 were set equal, and the intercept factor mean was estimated. (p. 186)
+
+```{r}
+model7.2a <- '  
+i =~ 1*diab1 + 1*diab2 + 1*diab3 + 1*diab4 + 1*diab5 + 1*diab6
+s =~ 0*diab1 + 1*diab2 + 2*diab3 + 3*diab4 + 4*diab5 + 5*diab6
+
+# variances/covariances
+i ~~ i
+s ~~ psi11*s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+# intercept thresholds
+diab1 | 0*t1  # set the first to 0
+diab2 | a*t1  # constrain the next 5 to equality
+diab3 | a*t1
+diab4 | a*t1
+diab5 | a*t1
+diab6 | a*t1
+
+# scaling constant for y*
+diab1 ~*~ 1*diab1  # set the first to 1
+diab2 ~*~ diab2    # freely estimate the next 5
+diab3 ~*~ diab3
+diab4 ~*~ diab4
+diab5 ~*~ diab5
+diab6 ~*~ diab6
+
+# compute reliability
+rho1 := psi11 / (psi11 + 1/6)
+'
+
+fit_7.2a <- 
+  growth(model7.2a, 
+         data = health1,
+         parameterization = "delta", 
+         estimator = "wlsmv",
+         ordered = c("diab1", "diab2", "diab3", "diab4", "diab5", "diab6"))
+
+summary(fit_7.2a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Here's a focused look at our model fit.
+
+```{r}
+fitmeasures(fit_7.2a, c("chisq.scaled", "df.scaled", "pvalue.scaled", "cfi.scaled", "rmsea.scaled", "wrmr")) 
+```
+
+With a more focused look at the fit statistics, you can see our model came very close the what Newsom reported in the text. Here's a focused look at the estimates for the mean intercept and slope.
+
+```{r}
+parameterestimates(fit_7.2a) %>% 
+  filter(str_detect(op, "~1") & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+We can use the standard normal cdf like Newsome did, like so.
+
+```{r}
+pnorm(-1.336, mean = 0, sd = 1)
+```
+
+Now we take a focused look at the estimates for the latent variances and their covariance.
+
+```{r}
+parameterestimates(fit_7.2a) %>% 
+  filter(str_detect(op, "~~") & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+If you looked closely at our `model7.2a` syntax, we defined $\rho_1$ and computed it along with the rest of the model. Here's the estimate and its 95% intervals.
+
+```{r}
+parameterestimates(fit_7.2a) %>% 
+  filter(str_detect(op, ":=")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+Happily, Newsom did provide us with an `ex7-2.b.R` file. As did Newsom, we'll need to discretize our BMI variables. Rather than the tedious base R code in the `ex7-2.b.R` file, we'll use the `cue()` function, which you might learn more about [here](https://rpubs.com/pierrelafortune/cutdocumentation). To simplify the code, we'll wrap `cut()` into a custom function called `categorize_bmi()`.
+
+```{r, echo = F, eval = F}
+tibble(x = c(17:18, 18.5, 19:31)) %>% 
+  mutate(d = cut(x, 
+                 breaks = c(-Inf, 18.5, 25, 30, Inf),
+                 labels = 1:4,
+                 include.lowest = T, right = F))
+```
+
+```{r}
+categorize_bmi <- function(x) {
+  cut(x, 
+      breaks = c(-Inf, 18.5, 25, 30, Inf),
+      labels = 1:4,
+      include.lowest = T, right = F)
+}
+```
+
+How put `categorize_bmi()` to use.
+
+```{r}
+health1 <-
+  health1 %>% 
+  mutate(wtcat1 = categorize_bmi(bmi1),
+         wtcat2 = categorize_bmi(bmi2),
+         wtcat3 = categorize_bmi(bmi3),
+         wtcat4 = categorize_bmi(bmi4),
+         wtcat5 = categorize_bmi(bmi5),
+         wtcat6 = categorize_bmi(bmi6))
+```
+
+Fit and summarize `model7.2b`.
+
+```{r}
+model7.2b <- '  
+i =~ 1*wtcat1 + 1*wtcat2 + 1*wtcat3 + 1*wtcat4 + 1*wtcat5 + 1*wtcat6
+s =~ 0*wtcat1 + 1*wtcat2 + 2*wtcat3 + 3*wtcat4 + 4*wtcat5 + 5*wtcat6
+
+# variances/covariances
+i ~~ i
+s ~~ psi11*s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+# intercept thresholds
+wtcat1 | 0*t1
+wtcat1 | a*t2
+wtcat1 | b*t3
+
+wtcat2 | 0*t1
+wtcat2 | a*t2
+wtcat2 | b*t3
+
+wtcat3 | 0*t1
+wtcat3 | a*t2
+wtcat3 | b*t3
+
+wtcat4 | 0*t1
+wtcat4 | a*t2
+wtcat4 | b*t3
+
+wtcat5 | 0*t1
+wtcat5 | a*t2
+wtcat5 | b*t3
+
+wtcat6 | 0*t1
+wtcat6 | a*t2
+wtcat6 | b*t3  
+'
+
+fit_7.2b <- 
+  growth(model7.2b, 
+         data = health1,
+         parameterization = "theta", 
+         estimator = "wlsmv",
+         ordered = c("wtcat1", "wtcat2", "wtcat3", "wtcat4", "wtcat5", "wtcat6"))
+
+summary(fit_7.2b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Here's a focused look at our model fit.
+
+```{r}
+fitmeasures(fit_7.2b, c("chisq.scaled", "df.scaled", "pvalue.scaled", "cfi.scaled", "wrmr")) 
+```
+
+Our results are very close to those in the text. The difference is not due to our alternative approach to defining the `wtcat` variables. I checked.
+
+```{r, eval = F, echo = F}
+health1$wtcat1 [health1$bmi1 < 18.5] <- 1
+health1$wtcat1 [health1$bmi1 >= 18.5 & health1$bmi1 < 25] <- 2
+health1$wtcat1 [health1$bmi1 >= 25 & health1$bmi1 < 30] <- 3
+health1$wtcat1 [health1$bmi1 >= 30] <- 4
+
+health1$wtcat2 [health1$bmi2 < 18.5] <- 1
+health1$wtcat2 [health1$bmi2 >= 18.5 & health1$bmi2 < 25] <- 2
+health1$wtcat2 [health1$bmi2 >= 25 & health1$bmi2 < 30] <- 3
+health1$wtcat2 [health1$bmi2 >= 30] <- 4
+
+health1$wtcat3 [health1$bmi3 < 18.5] <- 1
+health1$wtcat3 [health1$bmi3 >= 18.5 & health1$bmi3 < 25] <- 2
+health1$wtcat3 [health1$bmi3 >= 25 & health1$bmi3 < 30] <- 3
+health1$wtcat3 [health1$bmi3 >= 30] <- 4
+
+health1$wtcat4 [health1$bmi4 < 18.5] <- 1
+health1$wtcat4 [health1$bmi4 >= 18.5 & health1$bmi4 < 25] <- 2
+health1$wtcat4 [health1$bmi4 >= 25 & health1$bmi4 < 30] <- 3
+health1$wtcat4 [health1$bmi4 >= 30] <- 4
+
+health1$wtcat5 [health1$bmi5 < 18.5] <- 1
+health1$wtcat5 [health1$bmi5 >= 18.5 & health1$bmi5 < 25] <- 2
+health1$wtcat5 [health1$bmi5 >= 25 & health1$bmi5 < 30] <- 3
+health1$wtcat5 [health1$bmi5 >= 30] <- 4
+
+health1$wtcat6 [health1$bmi6 < 18.5] <- 1
+health1$wtcat6 [health1$bmi6 >= 18.5 & health1$bmi6 < 25] <- 2
+health1$wtcat6 [health1$bmi6 >= 25 & health1$bmi6 < 30] <- 3
+health1$wtcat6 [health1$bmi6 >= 30] <- 4
+```
+
+Here's a focused look at the estimates for the mean intercept and slope, unstandardized and standardized.
+
+```{r}
+parameterestimates(fit_7.2b) %>% 
+  filter(str_detect(op, "~1") & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+
+standardizedsolution(fit_7.2b) %>% 
+  filter(str_detect(op, "~1") & lhs %in% c("i", "s")) %>% 
+  select(lhs:est.std, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+Now take a focused look at the estimates for the latent variances and their covariance.
+
+```{r}
+parameterestimates(fit_7.2b) %>% 
+  filter(str_detect(op, "~~") & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+## Time-invariant covariates and cross-level interactions
+
+Adding a single time-invariant predictor $x_{1i}$, we can re-express the equation for the latent growth model to
+
+$$
+\begin{align*}
+y_{ti}    & = \eta_{0} + \eta_{1} \lambda_{t1} + \epsilon_{ti} \\
+\eta_{0i} & = \alpha_0 + \beta_{01} x_{1i} + \zeta_{0i} \\
+\eta_{1i} & = \alpha_1 + \beta_{11} x_{1i} + \zeta_{1i}, \text{where} \\
+
+\begin{bmatrix}
+\zeta_{0i} \\ \zeta_{1i}
+\end{bmatrix} & \sim \text{Normal} 
+\begin{pmatrix}
+\begin{bmatrix}
+0 \\ 0
+\end{bmatrix},
+
+\begin{bmatrix}
+\psi_{00} & \psi_{01} \\ \psi_{01} & \psi_{11}
+\end{bmatrix}
+
+\end{pmatrix} \text{and} \\
+\epsilon_{ti} & \sim \text{Normal} (0, \theta_{tti}).
+\end{align*}
+$$
+
+In case you missed it, the new portions are the $\beta$ coefficients in the second and third lines. If we re-express the first three lines into the compound version of the equation, we can more easily see this constitutes a *cross-level interaction*.
+
+$$
+\begin{align*}
+y_{ti} & = (\alpha_0 + \beta_{01} x_{1i} + \zeta_{0i}) + \lambda_{t1} (\alpha_1 + \beta_{11} x_{1i} + \zeta_{1i}) + \epsilon_{ti} \\
+& = \alpha_0 + \beta_{01} x_{1i} + \zeta_{0i} + \alpha_1 \lambda_{t1} + \beta_{11} \lambda_{t1} x_{1i} + \zeta_{1i} \lambda_{t1} + \epsilon_{ti} \\
+& = \alpha_0 + \alpha_1 \lambda_{t1} + \beta_{01} x_{1i} + \beta_{11} \lambda_{t1} x_{1i} + \zeta_{0i} + \zeta_{1i} \lambda_{t1} + \epsilon_{ti}
+\end{align*}
+$$
+
+> with the term $\lambda_{ti} x_{1i}$ representing a product of the time score, $\lambda_{ti}$, with the independent variable, $x_{1i}$, and $\beta_{11}$ representing the coefficient for the interaction. In conceptual terms, this cross-level interaction signifies that the change in $y_{ti}$ over time depends on the independent variable. (p. 187)
+
+### Predictor variable scaling.
+
+> As when testing interactions in regression analysis, the scaling of the independent variables may need to be considered. Although the interaction coefficient (i.e., the highest-order term) or its significance is not impacted by multicollinearity that occurs when including the product variable and the main effect variables in the equation, the standard errors for the main effects will tend to be inflated ([Aiken & West, 1991](http://us.sagepub.com/en-us/nam/multiple-regression/book3045)). Centering the predictors (i.e., creating deviation scores by subtracting the mean) will tend to reduce this non-essential multicollinearity. If the predictor variable is latent, centering the indicators is one method of centering the factor mean. (p. 188)
+
+### Probing cross-level interactions.
+
+> In the context of a growth curve model, a simple slope describes the relationship between the time variable and the outcome at particular values of the predictor. In other words, we estimate a simple growth curve to describe change over time for certain values of the covariate. Theoretically chosen values may be used for the covariate, but often the arbitrary points of one standard deviation below the mean, the mean, and one standard deviation above the mean are used. (p. 189)
+
+Given predictor $x_i$, the formulas for the expected intercept and slope values conditional on a given value of $x$ are
+
+$$
+\begin{align*}
+\alpha_{0 | x_1} & = \alpha_0 + \beta_{01} x_{1} \text{ and} \\
+\alpha_{1 | x_1} & = \alpha_1 + \beta_{11} x_{1}.
+\end{align*}
+$$
+
+One could focus on the Wald test using the formula
+
+$$
+\frac{\alpha_{1 | x_1}}{SE_{\alpha_1 | x_1}}.
+$$
+
+## Investigating group differences in trajectories
+
+Three approach for examining group differences include
+
+* MIMIC,
+* multigroup SEM, and
+* trajectory grouping analysis.
+
+### The MIMIC approach.
+
+The simplest version of the MIMIC approach is when group is a $G - 1$ series of dummy variables (i.e., a sole dummy with 2 groups). Given a single binary $x$ dummy, the $\beta_{00}$ coefficient is the group difference in the intercept, $\alpha_{0g_1} - \alpha_{0g_0}$. Similarly, the $\beta_{11}$ coefficient is the group difference in the time slope, $\alpha_{1g_1} - \alpha_{1g_0}$.
+
+### The multigroup approach.
+
+> The multigroup approach offers a few advantages in that variances can be compared among the groups to answer questions about whether variability in baseline values or variability in slopes differs in the two groups, a type of question that cannot be investigated with the MIMIC model. Inclusion of covariates within each of the group-specific models would allow for testing of three-way interactions. (p. 191)
+
+### Exploratory approach.
+
+> The third approach to investigating group differences in growth involves deriving a classification of cases from their patterns of change. It may be of interest, for example, to classify individuals into groups who increase, decrease, remain low, or remain high over time on perceived economic security. Once classified, it is then possible to exam- ine the sociodemographic or other characteristics of such groups. (p. 191)
+
+A more sophisticated variant is with mixture models.
+
+### Example 7.3: Growth curve with time-invariant covariate.
+
+Sadly, Newsom did not provide us with an `ex7-3.a.R` file. He described the model as "a conditional growth curve model of BMI was tested using age of the participant at baseline as a time-invariant covariate. This model builds on the unconditional model in Example 7.1" (p. 192). Thus we'll use `model7.1a` as a starting point. Since he indicated using a mean-centered verion of `age`, here we'll compute our version.
+
+```{r}
+health1 <-
+  health1 %>% 
+  mutate(age_c = age - mean(age))
+```
+
+Fit the model.
+
+```{r}
+model7.3a <- ' 
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ a1*1 
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+i ~ age_c
+s ~ b1*age_c
+
+# probing the interaction with defined parameters
+a1_1 := a1 - (-4.095 * b1)
+a1_2 := a1 - (0      * b1)
+a1_3 := a1 - (4.095  * b1)
+' 
+
+fit_7.3a <- 
+  growth(model7.3a, 
+         data = health1)
+
+summary(fit_7.3a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+With the exception of the SRMR, our model fits the same as the one in the text. Here's a focused look at the estimates for $\beta_{01}$ and $\beta_{11}$, unstandardized and standardized.
+
+```{r}
+parameterestimates(fit_7.3a) %>% 
+  filter(op == "~") %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+
+standardizedsolution(fit_7.3a) %>% 
+  filter(op == "~") %>% 
+  select(lhs:est.std, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+And here are the conditional means for the average intercept and slope.
+
+```{r}
+parameterestimates(fit_7.3a) %>% 
+  filter(op == "~1" & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+
+standardizedsolution(fit_7.3a) %>% 
+  filter(op == "~1" & lhs %in% c("i", "s")) %>% 
+  select(lhs:est.std, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+As to the conditional mean trajectory values, we already computed those with the last few lines in our model code, above. Those were the parameters we defined with the `:=` operator.
+
+```{r}
+parameterestimates(fit_7.3a) %>% 
+  filter(op == ":=") %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+As is turns out, Newsom has got these calculations incorrect in the text. If you look closely, he switched the values of the first and the third. If you’d like to check my math, here we walk out the numbers he displayed in the middle of page 192.
+
+```{r}
+.150 - (-4.095) * (-.015)
+.150 - (0) * (-.015)
+.150 - (4.095) * (-.015)
+```
+
+Happily, Newsom did provide us with the code for the next model in tha `ex7-3.b.R` file. First we'll dichotomize `age`.
+
+```{r}
+health1 <-
+  health1 %>% 
+  mutate(age_cat = ifelse(age >= 65, 1, 0))
+```
+
+Fit the model.
+
+```{r}
+model7.3b <- ' 
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+i ~ age_cat
+s ~ age_cat
+' 
+
+fit_7.3b <- 
+  growth(model7.3b, 
+         data = health1)
+
+summary(fit_7.3b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Look at the unstandardized estimates for $\beta_{01}$ and $\beta_{11}$.
+
+```{r}
+parameterestimates(fit_7.3b) %>% 
+  filter(op == "~") %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+Now check the conditional mean for the average slope.
+
+```{r}
+parameterestimates(fit_7.3b) %>% 
+  filter(op == "~1" & lhs == "s") %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+Following Newsom's lead, here's how we might reverse-code the `age_cat` dummy to get the conditional mean for the slope in the metric of the other age category.
+
+```{r}
+health1 <-
+  health1 %>% 
+  mutate(age_cat_recoded = age_cat - 1)
+  
+model7.3b_recoded <- ' 
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+i ~ age_cat_recoded
+s ~ age_cat_recoded
+' 
+
+fit_7.3b_recoded <- 
+  growth(model7.3b_recoded, 
+         data = health1)
+
+parameterestimates(fit_7.3b_recoded) %>% 
+  filter(op == "~1" & lhs == "s") %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+We might compare those conditional average slopes with a coefficient plot.
+
+```{r, fig.width = 6, fig.height = 1.25}
+bind_rows(
+  parameterestimates(fit_7.3b) %>% filter(op == "~1" & lhs == "s"),
+  parameterestimates(fit_7.3b_recoded) %>% filter(op == "~1" & lhs == "s")
+  ) %>% 
+  mutate(age = c("> 65", "<= 65")) %>% 
+  
+  ggplot(aes(x = age, y = est, ymin = ci.lower, ymax = ci.upper)) +
+  geom_pointrange() +
+  ylab(expression(alpha[1])) +
+  coord_flip(ylim = c(-.2, .2)) +
+  theme(panel.grid = element_blank())
+```
+
+Newsom provided the code for the alternative model using the multigroup approach in the `ex7-3.c.R` file.
+
+```{r}
+model7.3c <- ' 
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1  # do s ~ c(a, a)*1 to test for group difference (adding equality constraint)
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+' 
+
+fit_7.3c <- 
+  growth(model7.3c, 
+         data = health1,
+         group = "age_cat", 
+         group.equal = "lv.variances")
+
+summary(fit_7.3c, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+With the exception of the SRMR, our results mirror his.
+
+The way you include additional constraints with parameter labels within this version of the multigroup approach in lavaan has changed a bit since Newsom published the book. Rather than adding a single parameter label of the form `s ~ a*1`, we would now code `s ~ c(a, a)*1`. The former would only give the label to the first group. The latter assigns the label for both groups.
+
+```{r}
+model7.3c_alt <- ' 
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ c(a, a)*1  # we added the equality constraint
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+' 
+
+fit_7.3c_alt <- 
+  growth(model7.3c_alt, 
+         data = health1,
+         group = "age_cat", 
+         group.equal = "lv.variances")
+
+summary(fit_7.3c_alt, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Here's the likelihood ratio test.
+
+```{r}
+lavTestLRT(fit_7.3c, fit_7.3c_alt)
+```
+
+Take a focused look at the $\alpha_1$ estimates for the two groups from `fit_7.3c`.
+
+```{r}
+parameterestimates(fit_7.3c) %>% 
+  filter(op == "~1" & lhs == "s") %>% 
+  select(lhs:op, group, est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+These results make for a very similar coefficient plot to the one from the `fit_7.3b` and `fit_7.3b_recoded` models.
+
+```{r, fig.width = 6, fig.height = 1.25}
+parameterestimates(fit_7.3c) %>% 
+  filter(op == "~1" & lhs == "s") %>% 
+  mutate(age = ifelse(group == 2, "> 65", "<= 65")) %>% 
+  
+  ggplot(aes(x = age, y = est, ymin = ci.lower, ymax = ci.upper)) +
+  geom_pointrange() +
+  ylab(expression(alpha[1])) +
+  coord_flip(ylim = c(-.2, .2)) +
+  theme(panel.grid = element_blank())
+```
+
+If you're wondering why the estimate is so uncertain for the older-than-65 group, it's because of the $n$.
+
+```{r}
+health1 %>% 
+  group_by(age_cat) %>% 
+  count()
+```
+
+### Time-varying covariates.
+
+We can also add time-varying covariates, which are predictors that vary across time points. The modified level-1 equation follows the form
+
+$$
+\begin{align*}
+y_{ti} & = \alpha_0 + \lambda_{t1} \alpha_1 + \lambda_{t1} \zeta_{1i} + \beta_{tti} x_{ti} + \zeta_{0i} + \epsilon_{ti} \\
+       & = \alpha_0 + \lambda_{t1} \alpha_1 + \beta_{tti} x_{ti} + \lambda_{t1} \zeta_{1i} + \zeta_{0i} + \epsilon_{ti}, \text{where}
+\end{align*}
+$$
+
+> the subscript for synchronous path $\beta_{tti}$ has a double $t$ subscript to represent $y_t$ predicted by $x_t$ at each time point, a value that may vary across cases in the data set. The model assumes each $x_{ti}$ is independent of $\epsilon_{ti}$ as in any regression model. It should also be mentioned that modeling the independent effects of $x_{ti}$, $\eta_{0i}$, and $\eta_{1i}$ implies estimating the covariances among these exogenous variables (p. 194)
+
+### Predictor variable scaling.
+
+As in other kinds of regression models, how we center our predictors can influence how we interpret latent growth models with time-varying predictors. Some options:
+
+* Mean-center the covariate separately at each time point ($x_{ti}^* = x_{ti} - \overline x_t$). "The mean of the centered scores, $\overline x_t^*$, would then be equal to 0 for all time points, and *any change in the level of the covariate over time would not be taken into account* in the estimation of the growth parameters" (p. 194, *emphasis* added)
+* Center the covariate at each time on the mean of the first ($x_{ti}^* = x_{ti} - \overline x_1$). "The average distance from the score at the first time point as well as the covariance among the scores is retained with this method" (p. 195).
+* Center the covariate at each time on the grand mean ($x_{ti}^* = x_{ti} - \overline x$).
+* Center the covariate around the mean scores within individuals over time ($x_{ti}^* = x_{ti} - \overline x_i$), called *group-mean centering*.
+> If the mean for each case (i.e., averaging across the time points within each case), is used, the interpretation of the intercept in reference to the first time point is altered, because the centering of the covariate is no longer in reference to the first time point. (p. 195)
+* As an alternative, combind group-mean centering with centering on the first time point ($x_{ti}^* = x_{ti} - x_{1i} - \overline x_i$). This "would center within context while retaining reference to the covariate score at the first time point (p. 195)".
+
+> Each of the centering approaches will produce different interpretations of the adjusted means, and none are necessarily incorrect. The interpretation can be incorrect, however, given the method of centering that used, so great care is needed to ensure the proper interpretation (see [Enders & Tofighi, 2007](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.928.9848&rep=rep1&type=pdf) and [Algina & Swaminathan, 2011](https://www.researchgate.net/publication/271587783_Centering_in_two-level_nested_designs), for in-depth discussions of centering).
+
+### Interpretation of the synchronous path.
+
+> The synchronous path between the time-varying covariate and the dependent variable, $\beta_{tt}$, represents the synchronous relationship between the two variables and not a prediction of change in the dependent variable. The paths may be set equal across time for theoretical reasons or if there are problems with empirical underidentification, and their equivalence can be tested with a nested model comparison. In some instances, such a constraint may be necessary for the model to be empirically identified. (pp. 195--196)
+
+### Example 7.4: Time-varying covariate.
+
+In the `health1` data set, self-related health is coded in the columns `srh1:srh6`.
+
+```{r}
+health1 %>% 
+  select(srh1:srh6)
+```
+
+Here's how to code $\text{srh}_t^* = \text{srh}_{ti} - \overline{\text{srh}}_1$, which we'll can `srh_c[t]`, where `[t]` is a placeholder for 1 through 6.
+
+```{r}
+# save the relevant mean
+mu_srh1 <- mean(health1$srh1)
+
+# compute
+health1 <-
+  health1 %>% 
+  mutate(srh_c1 = srh1 - mu_srh1,
+         srh_c2 = srh2 - mu_srh1,
+         srh_c3 = srh3 - mu_srh1,
+         srh_c4 = srh4 - mu_srh1,
+         srh_c5 = srh5 - mu_srh1,
+         srh_c6 = srh6 - mu_srh1)
+  
+# take a focused look
+health1 %>% 
+  select(starts_with("srh")) %>% 
+  glimpse()
+```
+
+Newsom didn't provide the code for this model in a `.R` file. But we can build on the code from prior models and a preview of the next model from the `ex7-4b.R` file.
+
+```{r}
+model7.4a <- '  
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+# bmi1 ~ 0
+# bmi2 ~ 0
+# bmi3 ~ 0
+# bmi4 ~ 0
+# bmi5 ~ 0
+# bmi6 ~ 0
+
+bmi1 ~ srh_c1
+bmi2 ~ srh_c2
+bmi3 ~ srh_c3
+bmi4 ~ srh_c4
+bmi5 ~ srh_c5
+bmi6 ~ srh_c6
+'
+
+fit_7.4a <- 
+  growth(model7.4a, 
+         data = health1,
+         information = "observed")
+
+summary(fit_7.4a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Our results are similar with what Newsom reported in the text. Our model $\chi^2$ is within the same range and has the same $df$. The other fit statistics are similar but different, too. The magnitudes of our time-varying covariate are similar but different from those Newsom reported, too. Here they are in a coefficient plot.
+
+```{r, fig.width = 6, fig.height = 1.75}
+parameterestimates(fit_7.4a) %>% 
+  filter(op == "~") %>% 
+  mutate(time = 1:n()) %>% 
+  
+  ggplot(aes(x = time, y = est, ymin = ci.lower, ymax = ci.upper)) +
+  geom_pointrange() +
+  scale_x_continuous(breaks = 1:6) +
+  ylab(expression(beta[italic(tt)])) +
+  coord_flip(ylim = c(-.2, .2)) +
+  theme(panel.grid = element_blank())
+```
+
+Here's the same, but standardized.
+
+```{r, fig.width = 6, fig.height = 1.75}
+standardizedsolution(fit_7.4a) %>% 
+  filter(op == "~") %>% 
+  mutate(time = 1:n()) %>% 
+  
+  ggplot(aes(x = time, y = est.std, ymin = ci.lower, ymax = ci.upper)) +
+  geom_pointrange() +
+  scale_x_continuous(breaks = 1:6) +
+  ylab(expression(paste("standardized ", beta[italic(tt)]))) +
+  coord_flip(ylim = c(-.05, .05)) +
+  theme(panel.grid = element_blank())
+```
+
+Here's a focused look at the means and variance/covariance estimates for the latent growth factors.
+
+```{r}
+parameterestimates(fit_7.4a) %>% 
+  filter(op %in% c("~1", "~~") & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3) %>% 
+  arrange(desc(op))
+```
+
+They're quite similar to those Newsom reported in the text. It's unclear why our results differed this much from those in the text. I checked and it's not because of rounding error on how we computed our centered `srh_c[t]` variables. So it goes.
+
+We can find Newsom's code for the next model in the `ex7-4b.R` file.
+
+```{r}
+model7.4b <- '  
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+# bmi1 ~ 0
+# bmi2 ~ 0
+# bmi3 ~ 0
+# bmi4 ~ 0
+# bmi5 ~ 0
+# bmi6 ~ 0
+
+bmi1 ~ a*srh_c1
+bmi2 ~ a*srh_c2
+bmi3 ~ a*srh_c3
+bmi4 ~ a*srh_c4
+bmi5 ~ a*srh_c5
+bmi6 ~ a*srh_c6
+'
+
+fit_7.4b <- 
+  growth(model7.4b, 
+         data = health1,
+         information = "observed")
+
+summary(fit_7.4b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Here's the likelihood ratio test between this and the prior model.
+
+```{r}
+lavTestLRT(fit_7.4a, fit_7.4b)
+```
+
+Although the specific values are different, the overall pattern for our models is the same as Newsom presented in the text. The model with the equality constraints fit worse.
+
+## Reconsidering time
+
+So far, we have 
+
+> implicitly assumed that (a) data are complete, (b) each case has equally spaced intervals, and (c) each case starts and ends at the same time relative to the desired time metric. The real world of research is usually not so perfect. (p. 196)
+
+### Missing data.
+
+"In rough terms, there are two broad patterns of missing data in longitudinal studies, intermittent missing data and attrition" (p. 197).
+
+### Unequally spaced observations.
+
+> Small deviations from time structure of this nature are unlikely to create serious biases, and data are usually treated as time structured. Provided that data are time structured (i.e., consistent across cases) and there is true unequal spacing of observations, there also is no special problem with estimating a latent growth curve. Loadings may be altered to appropriately reflect the difference in spacing... If there is considerable variation across cases in the regularity of the intervals, special estimation of these individually varying time points can be used, a method described in greater detail shortly. (p. 197)
+
+### Cohorts.
+
+"Depending on the research questions and the data structure, there are several possible approaches to different cohorts" (p. 197).
+
+#### Time-invariant covariate.
+
+> One approach to dealing with different cohorts, such as age differences at the beginning of the college study, is simply to control for the cohort in the model. Such a solution would use age as a time-invariant covariate in a model with wave of the study as the time code (e.g., $t = 0, 1, 2$, and $3$). In this approach, the interpretation of the intercept and slope are conditioned on the covariate (e.g., age), interpreted as the expected baseline value and rate of change for those with a particular value on the covariate (e.g., average age if centered). (p. 198)
+
+#### Multigroup approach.
+
+> When cohort differences are of interest, a time-invariant covariate would be problematic if the desired interpretation was to consider cohort differences as meaningful. A multigroup approach specifying a latent growth curve model in each cohort group would allow for comparisons of intercept or slopes across cohorts. (p. 198)
+
+This approach could allow for any combination of invariance constraints. 
+
+#### Using the time metric. 
+
+> Another approach to modeling growth when there are several cohorts is to use the time metric, such as age, as a basis for the slope factor loadings instead of time codes representing waves of the study. In this approach, the full range of ages is used for slope factor loadings, using missing estimation to accommodate values where cohorts do not overlap. In the college age cohort study, we would use the students age for growth curve loadings, with loadings spanning ages 18 to 25. (p. 198)
+
+### Individually varying time points.
+
+> When there is considerable variability across cases in the start and end times, the data can be said to have individually varying time points. In this circumstance, a special estimation process, called the *variable definition method*, can be used ([Neale, Boker, Xie, & Maes., 2002](https://www.researchgate.net/publication/282013537_Mx_Statistical_Modeling_6th_Edition_2004)). The method can be viewed as a variant on the approach that sets factor loadings according to the full range of a time metric, such as setting loadings to student ages in the college example. With the variable definition approach, however, special software features allow the user to link the desired time metric to factor loadings for the slope factor by designating artificial time codes on a case-by-case basis. (p. 199, *emphasis* in the original)
+
+### Example 7.5: Some explorations of varying time-points.
+
+Newsom wrote: "The health and aging data set has participants that range from 50 to 70 at baseline" (p. 200). I'm not sure where he's getting those age values from.  If we round the `age` values to the nearest whole number, here is the distribution.
+
+```{r, fig.width = 5, fig.height = 3}
+health1 <-
+  health1 %>% 
+  mutate(age_round = age %>% round(., digits = 0)) 
+
+health1 %>% 
+  ggplot(aes(x = age_round)) +
+  geom_bar() +
+  scale_x_continuous(breaks = seq(from = 45, to = 70, by = 5)) +
+  theme(panel.grid = element_blank())
+```
+
+As Newsom warmed up discussing his first example, he described the creation of three age categories: "Three age categories were created, <65, 65 to 70, and >70" (p. 201). Here we make those categories and count their frequencies in the data.
+
+```{r}
+health1 <-
+  health1 %>% 
+  mutate(age_cat = ifelse(age < 65, "a",
+                          ifelse(age > 70, "c", "b")))
+
+health1 %>% 
+  group_by(age_cat) %>% 
+  count()
+```
+
+Here's what the distribution of ages looks like when color coded by those three categories.
+
+```{r, fig.width = 5, fig.height = 3}
+health1 %>% 
+  mutate(age_cat = factor(age_cat,
+                          levels = letters[1:3],
+                          labels = c("< 65", "65 to 70", "> 70"))) %>% 
+  
+  ggplot(aes(x = age_round, fill = age_cat)) +
+  geom_bar() +
+  scale_x_continuous(breaks = seq(from = 45, to = 70, by = 5)) +
+  scale_fill_viridis_d(option = "A", direction = 1, begin = .1, end = .6) +
+  theme(panel.grid = element_blank(),
+        legend.position = c(.87, .75),
+        legend.background = element_rect(fill = "grey92"))
+```
+
+I'm not sure what's going on, here, but this distribution is absurd. Unfortunately, Newsom did not provide an `ex7-5a.R` file to clear this up. Happily, Newsom's second approach seemed more reasonable. Based on the `ex7-5b.R` file, these are the new categories and their frequencies.
+
+```{r}
+health1 <-
+  health1 %>% 
+  mutate(age_cat = ifelse(age <= 54, 0,
+                          ifelse(age > 59, 2, 1)))
+
+health1 %>% 
+  group_by(age_cat) %>% 
+  count()
+```
+
+It looks like this.
+
+```{r, fig.width = 5, fig.height = 3}
+health1 %>% 
+  mutate(age_cat = factor(age_cat,
+                          levels = 0:2,
+                          labels = c("<= 54", "54 to 59", "> 59"))) %>% 
+  
+  ggplot(aes(x = age_round, fill = age_cat)) +
+  geom_bar() +
+  scale_x_continuous(breaks = seq(from = 45, to = 70, by = 5)) +
+  scale_fill_viridis_d(option = "A", direction = 1, begin = .1, end = .6) +
+  theme(panel.grid = element_blank(),
+        legend.position = c(.87, .75),
+        legend.background = element_rect(fill = "grey92"))
+```
+
+Here's the model based on the code in the file.
+
+```{r}
+model7.5b <- '
+i =~ 1*bmi1 + 1*bmi2 + 1*bmi3 + 1*bmi4 + 1*bmi5 + 1*bmi6
+s =~ 0*bmi1 + 1*bmi2 + 2*bmi3 + 3*bmi4 + 4*bmi5 + 5*bmi6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+i + s ~ age_cat
+'
+
+fit_7.5b <- 
+  growth(model7.5b, 
+         data = health1)
+
+summary(fit_7.5b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Unfortunately, these results do not match up with those in the text. I’ll calling this set of examples a wash. If you have a better solution, please [share your code](https://github.com/ASKurz/Longidutinal-SEMing/issues).
+
+### Comments.
+
+>  Bias only exists to the extent that interpretation of the results does not match the data analytic strategy, so no method of coding time is truly incorrect. Choosing the appropriate time coding for a particular problem and arriving at the appropriate interpretation can be challenging, so neither of these stages should be taken lightly or be concluded without careful consideration. (pp. 201--202)
+
+## Second-order growth curve models: Multiple indicators at each occasion
+
+> The latent growth curve model can be augmented to include multiple indicators at each occasion, models that are variably referred to as *second-order growth curve models* ([Sayer & Cumsille, 2001](https://psycnet.apa.org/record/2001-01077-006)), curve-of-factors models (e.g., [McArdle, 1988](https://link.springer.com/chapter/10.1007/978-1-4613-0893-5_17)), multivariate latent curve models ([MacCallum, Kim, Malarkey, & Kiecolt-Glaser, 1997](http://pni.osumc.edu/KG%20Publications%20(pdf)/114.pdf)), or multiple-indicator growth curve models ([Chan, 1998](https://journals.sagepub.com/doi/pdf/10.1177/109442819814004?casa_token=RmviSUUTI60AAAAA:QpskyMZcmCuEEcTg2815MRRGTEL0V7kmizUgkTZT37fszRnkkoJa1Q7YHVW4RQPpeZ-pOysM7qoKNw))... 
+>
+> The intercepts for the regression of the first-order factors on the second-order factors ([$\alpha_{t1}, \alpha_{t2}$, and $\alpha_{t3}$] in Figure 7.10) are generally set equal to 0, so that the means of the first-order factors are defined by the identification constraints on the first-order factors. An assumption that occasion-specific variances are homogeneous over time can be imposed on first-order disturbances, $\psi_{tt}$, and can be tested using chi-square differences. The scaling choice for each first-order factor then determines how the values or the intercept and slope factors are interpreted (see below). Initial steps to establish measurement invariance are recommended, and appropriate constraints on loadings and measurement intercepts for repeated indicators, at minimum, typically would be employed ([Chen, Sousa & West, 2005](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.457.5719&rep=rep1&type=pdf); [Ferrer, Balluerka, & Widaman, 2008](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2799302/)). (pp. 202--203, *emphasis* in the original)
+
+### Identification of first-order factors.
+
+"Ferrer and colleagues (2008) point out that the use of referent identification for loading and intercepts may lead to different results, depending on the choice of referent" (p. 203). The effects coding identification approach ([Little, Slegers, & Card, 2006](http://www.agencylab.ku.edu/~agencylab/manuscripts/(Little,%20Slegers,%20Card,%202006).pdf)) will provide a more interpretable solution.
+
+### Advantages of the second-order growth curve model.
+
+Because measurement error does not affect mean estimates, second-order models will not influence the means of the growth factors, only the variances/covariances. This has implications for reliability.
+
+> In the second-order growth curve model, measurement residual variance, $\operatorname{Var} (\epsilon_{(j)}) = \theta_{(tt)}$, no longer represents occasion-specific variance. Instead, the disturbance variance associated with the first-order factors, $\psi_{(tt)}$, represents occasion-specific variance. The reduced estimate of occasion-specific variance will increase reliability estimates. For example, consider the $\rho_\text{RB}$ formula for reliability (e.g., Raudenbush & Bryk, 2002) as a representative example. Replacing the measurement residual variance with the factor disturbance variance, gives
+>
+> $$\rho_\text{RB} = \frac{\psi_{11}}{\psi_{11} + \psi_{(tt)} / T}$$
+>
+> The value used could be a single value derived from a model with equality constraints for the parameter or the average of disturbance variance estimates. (p. 205)
+
+Another big plus is indicator-specific residual covariances.
+
+> Because autocorrelations among measurement residuals concern the covariance structure and not the mean structure, the effect on growth parameter estimates from including auto-correlations among measurement residuals will mostly be seen in the covariance between intercept and slope and the heterogeneity of occasion-specific variance. (p. 205)
+
+### Example 7.6: Second-order growth curve model.
+
+> The initial model used the referent indicator approach to identifying the first-order factors with the first loading and the first measurement intercept at each time point set equal to 1 and 0, respectively. For this particular model, the remaining loadings and measurement intercepts were not set equal over time in order to illustrate the relationship to the first-order model. Correlated measurement residuals were also omitted from the model for purposes of illustration. (p. 206)
+
+Newsom provided the lavaan code in the `ex7-6a.R` file.
+
+```{r}
+model7.6a <- ' 	
+# first loading is referent by default
+# equality constraints on loading and intercepts omit for this example
+
+eta1 =~ cesdna1 + cesdpa1 + cesdso1
+eta2 =~ cesdna2 + cesdpa2 + cesdso2
+eta3 =~ cesdna3 + cesdpa3 + cesdso3
+eta4 =~ cesdna4 + cesdpa4 + cesdso4
+eta5 =~ cesdna5 + cesdpa5 + cesdso5
+eta6 =~ cesdna6 + cesdpa6 + cesdso6
+
+# first-order intercepts
+cesdna1 ~ 0*1
+cesdpa1 ~ 1
+cesdso1 ~ 1
+cesdna2 ~ 0*1
+cesdpa2 ~ 1
+cesdso2 ~ 1
+cesdna3 ~ 0*1
+cesdpa3 ~ 1
+cesdso3 ~ 1
+cesdna4 ~ 0*1
+cesdpa4 ~ 1
+cesdso4 ~ 1
+cesdna5 ~ 0*1
+cesdpa5 ~ 1
+cesdso5 ~ 1
+cesdna6 ~ 0*1
+cesdpa6 ~ 1
+cesdso6 ~ 1
+
+i =~ 1*eta1 + 1*eta2 + 1*eta3 + 1*eta4 + 1*eta5 + 1*eta6
+s =~ 0*eta1 + 1*eta2 + 2*eta3 + 3*eta4 + 4*eta5 + 5*eta6
+
+# second-order variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# second-order intercepts
+i ~ 1
+s ~ 1 
+
+# first-order latent intercepts
+eta1 ~ 0
+eta2 ~ 0
+eta3 ~ 0
+eta4 ~ 0
+eta5 ~ 0
+eta6 ~ 0
+'
+
+fit_7.6a <- 
+  growth(model7.6a, 
+         data = health1)
+
+summary(fit_7.6a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Happily, our results mirror those in the text. Here's a focused look at the mean estimates for the latent intercept and slope, unstandardized and standardized.
+
+```{r}
+parameterestimates(fit_7.6a) %>% 
+  filter(op == "~1" & lhs %in% c("i", "s")) %>% 
+  select(lhs:op, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+
+standardizedsolution(fit_7.6a) %>% 
+  filter(op == "~1" & lhs %in% c("i", "s")) %>% 
+  select(lhs:op, est.std, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Here's the mean for the [default] referent indicator at the first time point, `cesdna1`.
+
+```{r}
+mean(health1$cesdna1) %>% 
+  round(digits = 3)
+```
+
+Notice how it's almost exactly the same as the estimate for $\alpha_0$.
+
+```{r}
+parameterestimates(fit_7.6a) %>% 
+  filter(op == "~1" & lhs == "i") %>% 
+  select(lhs:op, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Now we take a focused look at the estimates for the latent variances and their covariance.
+
+```{r}
+parameterestimates(fit_7.6a) %>% 
+  filter(op == "~~" & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+"For comparison, a first-order latent growth curve model was tested using only the vari- able that served as the referent indicator (negative affect) in the second-order model" (p. 206). We find Newsom's code in the `ex7-6b.R` file.
+
+```{r}
+model7.6b <- ' 	
+# model for only the first variable used as an indicator in the second-order model
+i =~ 1*cesdna1 + 1*cesdna2 + 1*cesdna3 + 1*cesdna4 + 1*cesdna5 + 1*cesdna6
+s =~ 0*cesdna1 + 1*cesdna2 + 2*cesdna3 + 3*cesdna4 + 4*cesdna5 + 5*cesdna6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+cesdna1 ~ 0*1
+cesdna2 ~ 0*1
+cesdna3 ~ 0*1
+cesdna4 ~ 0*1
+cesdna5 ~ 0*1
+cesdna6 ~ 0*1
+'
+
+fit_7.6b <- 
+  growth(model7.6b, 
+         data = health1)
+
+summary(fit_7.6b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+The means for the latent intercept and slope are virtually the same for `fit_7.6b` as they were for `fit_7.6a`.
+
+```{r}
+parameterestimates(fit_7.6b) %>% 
+  filter(op == "~1" & lhs %in% c("i", "s")) %>% 
+  select(lhs:op, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+The estimates for the latent variances and their covariance were quite similar, too.
+
+```{r}
+parameterestimates(fit_7.6b) %>% 
+  filter(op == "~~" & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+Here are the Wald ratios (i.e., `est` / `se`) for the latent slopes for the two models.
+
+```{r}
+parameterestimates(fit_7.6a) %>% 
+  filter(op == "~1" & lhs == "s") %>% 
+  select(lhs:op, est, z) %>% 
+  mutate_if(is.double, round, digits = 3)
+
+parameterestimates(fit_7.6b) %>% 
+  filter(op == "~1" & lhs == "s") %>% 
+  select(lhs:op, est, z) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+> Finally, to demonstrate a more optimal model specification, a second-order latent growth curve model with effects coding identification of the first-order factors was tested. The effects coding identification approach will produce growth model estimates based on weighted means of the indicators at each occasion, which will be more representative of the first-order factor indicators. The model included equality constraints on factor loadings and measurement intercepts over time as well as correlations among measurement residuals for repeated indicators. (p. 206)
+
+Newsom provided the lavaan code in the `ex7-6e.R` file.
+
+```{r}
+model7.6e <- ' 	
+# first loading is referent by default
+# equality constraints on loading and intercepts omit for this example
+eta1 =~ NA*cesdna1 + l1*cesdna1 + l2*cesdpa1 + l3*cesdso1
+eta2 =~ NA*cesdna2 + l1*cesdna2 + l2*cesdpa2 + l3*cesdso2
+eta3 =~ NA*cesdna3 + l1*cesdna3 + l2*cesdpa3 + l3*cesdso3
+eta4 =~ NA*cesdna4 + l1*cesdna4 + l2*cesdpa4 + l3*cesdso4
+eta5 =~ NA*cesdna5 + l1*cesdna5 + l2*cesdpa5 + l3*cesdso5
+eta6 =~ NA*cesdna6 + l1*cesdna6 + l2*cesdpa6 + l3*cesdso6
+
+# first-order intercepts
+cesdna1 ~ nu1*1
+cesdpa1 ~ nu2*1
+cesdso1 ~ nu3*1
+cesdna2 ~ nu1*1
+cesdpa2 ~ nu2*1
+cesdso2 ~ nu3*1
+cesdna3 ~ nu1*1
+cesdpa3 ~ nu2*1
+cesdso3 ~ nu3*1
+cesdna4 ~ nu1*1
+cesdpa4 ~ nu2*1
+cesdso4 ~ nu3*1
+cesdna5 ~ nu1*1
+cesdpa5 ~ nu2*1
+cesdso5 ~ nu3*1
+cesdna6 ~ nu1*1
+cesdpa6 ~ nu2*1
+cesdso6 ~ nu3*1
+
+# residual covariances
+cesdna1 ~~ cesdna2 + cesdna3 + cesdna4 + cesdna5 + cesdna6
+cesdna2 ~~ cesdna3 + cesdna4 + cesdna5 + cesdna6
+cesdna3 ~~ cesdna4 + cesdna5 + cesdna6
+cesdna4 ~~ cesdna5 + cesdna6
+cesdna5 ~~ cesdna6
+cesdpa1 ~~ cesdpa2 + cesdpa3 + cesdpa4 + cesdpa5 + cesdpa6
+cesdpa2 ~~ cesdpa3 + cesdpa4 + cesdpa5 + cesdpa6
+cesdpa3 ~~ cesdpa4 + cesdpa5 + cesdpa6
+cesdpa4 ~~ cesdpa5 + cesdpa6
+cesdpa5 ~~ cesdpa6
+cesdso1 ~~ cesdso2 + cesdso3 + cesdso4 + cesdso5 + cesdso6
+cesdso2 ~~ cesdso3 + cesdso4 + cesdso5 + cesdso6
+cesdso3 ~~ cesdso4 + cesdso5 + cesdso6
+cesdso4 ~~ cesdso5 + cesdso6
+cesdso5 ~~ cesdso6
+
+i =~ 1*eta1 + 1*eta2 + 1*eta3 + 1*eta4 + 1*eta5 + 1*eta6
+s =~ 0*eta1 + 1*eta2 + 2*eta3 + 3*eta4 + 4*eta5 + 5*eta6
+
+# second-order variances/covariances
+i ~~ i
+s ~~ psi11*s
+i ~~ s
+
+# second-order intercepts
+i ~ 1
+s ~ 1 
+
+# first-order latent intercepts
+eta1 ~ 0*1
+eta2 ~ 0*1
+eta3 ~ 0*1
+eta4 ~ 0*1
+eta5 ~ 0*1
+eta6 ~ 0*1
+
+eta1 ~~ psi1*eta1
+eta2 ~~ psi2*eta2
+eta3 ~~ psi3*eta3
+eta4 ~~ psi4*eta4
+eta5 ~~ psi5*eta5
+eta6 ~~ psi6*eta6
+
+# model constraints
+l1  == 3 - l2 - l1
+nu1 == 0 - nu2 - nu3
+
+# additional parameters
+psi_mu := (psi1 + psi2 + psi3 + psi4 + psi5 + psi6) / 6
+rho    := psi11 / (psi11 + psi_mu / 6)
+'
+
+fit_7.6e <- 
+  growth(model7.6e, 
+         data = health1)
+
+summary(fit_7.6e,
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+With the exception of the SRMR, our model fit the same as the one in the text. Here's a focused look at the mean estimates for the latent intercept and slope, unstandardized and standardized.
+
+```{r}
+parameterestimates(fit_7.6e) %>% 
+  filter(op == "~1" & lhs %in% c("i", "s")) %>% 
+  select(lhs:op, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+
+standardizedsolution(fit_7.6e) %>% 
+  filter(op == "~1" & lhs %in% c("i", "s")) %>% 
+  select(lhs:op, est.std, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Now the estimates for the latent variances and their covariance.
+
+```{r}
+parameterestimates(fit_7.6e) %>% 
+  filter(op == "~~" & lhs %in% c("i", "s")) %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+If you looked closely at our model code, you would have noticed we used the `:=` operator to define $\rho_\text{RB}$ as an extra parameter. Since our approach avoided the rounding error pitfalls of working with the point estimates, the results will differ a little from what Newsom reported in the text.
+
+```{r}
+parameterestimates(fit_7.6e) %>% 
+  filter(op == ":=" & lhs == "rho") %>% 
+  select(lhs:est, starts_with("ci.")) %>%
+  mutate_if(is.double, round, digits = 3)
+```
+
+Newsom's point estimate approach ended up underestimating $\rho_\text{RB}$ for the slope.
+
+### Comments.
+
+"Given the several potential advantages of the second-order growth curve model and the frequent availability of multiple indicators for a construct, there are few reasons why the second-order growth curve model should not be applied more often" (p. 207).
+
+## Power, number of time points, and sample size issues 
+
+> Minimum sample size guidelines for latent growth curve models should follow general recommendations for SEM, often stated in terms of a minimum of 100 cases for normally distributed continuous variables or 5--10 cases per measured variable (e.g., [Anderson & Gerbing, 1988](http://aboomsma.webhosting.rug.nl/csadata/anderson_gerbing_1988.pdf); [Finney & DiStefano, 2013](https://books.google.com/books?hl=en&lr=&id=VfonDwAAQBAJ&oi=fnd&pg=PA269&dq=Nonnormal+and+categorical+data+in+structural+equation+modeling&ots=-LD8sgFhSH&sig=n2B0O2Ob7WCiqRLK-vUAeFbBRyA#v=onepage&q=Nonnormal%20and%20categorical%20data%20in%20structural%20equation%20modeling&f=false); [Hu & Bentler, 1999](https://www.researchgate.net/publication/309032267_Cutoff_criteria_for_fit_indexes_in_covariance_structure_analysis_Conventional_criteria_versus_new_alternatives); [Tanaka, 1987](https://www.jstor.org/stable/pdf/1130296.pdf?casa_token=MFR8kvuqloEAAAAA:j9mhafWNx0vGGDoPn8ythvI_3ucmcoGhX35nDMYw8bVXIf3-F9Qq6DpVTCeiIhigG5RbCtSqyf0I5Dfj9ccxsZ7gJjbde-7ZX369nr5GISZoLDpOAuID)). These are oversimplifications, however, and convergence and power depend on model complexity, multivariate distributions, missing data, and estimation method (e.g., ML for continuous variables, WLSMV, bootstrapping). At minimum, three time points are required for a standard linear latent growth curve model with no special constraints, but simulation work by [Fan and Fan (2005)](https://www.jstor.org/stable/pdf/20157390.pdf?casa_token=CqhnzuKzqiEAAAAA:_FOuFIqzeiYRsqjZNu0RnDe6GIp_jCJ-8kdawSyPAnTOnJe7glgojq-7sjmg3gixhpdLjb2pSM29oL3iKTKHjYiM92YOxMhf41-22Iv8BxI3OwgXWe4-) found convergence problems in up to a quarter of the samples for a latent growth curve with only three time points...
+>
+> When considering statistical power for growth curve models, it is imperative to distinguish between tests of significance of fixed effects (average intercepts and slopes) and random effects (variances of intercepts and slopes). Fewer cases and time points are required for tests of fixed effects than for random effects. Based on simulation work on multilevel regression models (Maas & Hox, [2004](https://onlinelibrary.wiley.com/doi/full/10.1046/j.0039-0402.2003.00252.x?casa_token=lXrTYr4uIjIAAAAA:JBtio7qfaDETmNcnNPFB90vbvTF8Nh3t_FQG6p0X2tTHkgurWLETHM2R3DGvkVTeZHrHta8ZJHItxvY), [2005](http://joophox.net/publist/methodology05.pdf)), there will typically be unbiased standard errors and sufficient power to test fixed effects (average intercept and slope estimates) with a minimum of 50 groups with 5 cases per group...
+>
+> Sufficient power for tests of variance components appears to require more cases. (p. 207)
+
+See the text for further discussions.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+

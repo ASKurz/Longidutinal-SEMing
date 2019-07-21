@@ -2262,9 +2262,253 @@ Newsom's point estimate approach ended up underestimating $\rho_\text{RB}$ for t
 
 See the text for further discussions.
 
-## Session info
+## Reference {-}
+
+[Newsom, J. T. (2015). *Longitudinal structural equation modelling: A comprehensive introduction*. London: Routledge.](http://www.longitudinalsem.com)
+
+## Session info {-}
 
 ```{r}
 sessionInfo()
+```
+
+## Bonus: Playing with multivariate models {-}
+
+Here's the `health` data, again.
+
+```{r}
+health1_names <- c("age", "srh1", "srh2", "srh3", "srh4", "srh5", "srh6", "bmi1",
+"bmi2", "bmi3", "bmi4", "bmi5", "bmi6", "cesdna1", "cesdpa1", "cesdso1",
+"cesdna2", "cesdpa2", "cesdso2", "cesdna3", "cesdpa3", "cesdso3",
+"cesdna4", "cesdpa4", "cesdso4", "cesdna5", "cesdpa5", "cesdso5",
+"cesdna6", "cesdpa6", "cesdso6", "diab1", "diab2", "diab3", "diab4", "diab5", "diab6")
+
+health1 <- 
+  read_table2("data/health.dat",
+              col_names = F) %>% 
+  set_names(health1_names)
+
+glimpse(health1)
+```
+
+Here's the simple univariate model for negative affect. It's based on the `model7.1a` model.
+
+```{r}
+na <- '  
+i =~ 1*cesdna1 + 1*cesdna2 + 1*cesdna3 + 1*cesdna4 + 1*cesdna5 + 1*cesdna6
+s =~ 0*cesdna1 + 1*cesdna2 + 2*cesdna3 + 3*cesdna4 + 4*cesdna5 + 5*cesdna6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+cesdna1 ~ 0
+cesdna2 ~ 0
+cesdna3 ~ 0
+cesdna4 ~ 0
+cesdna5 ~ 0
+cesdna6 ~ 0
+'
+
+fit_na <- 
+  growth(na, 
+         data = health1)
+
+summary(fit_na, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Now here's the simple univariate model for positive affect.
+
+```{r}
+pa <- '  
+i =~ 1*cesdpa1 + 1*cesdpa2 + 1*cesdpa3 + 1*cesdpa4 + 1*cesdpa5 + 1*cesdpa6
+s =~ 0*cesdpa1 + 1*cesdpa2 + 2*cesdpa3 + 3*cesdpa4 + 4*cesdpa5 + 5*cesdpa6
+
+# variances/covariances
+i ~~ i
+s ~~ s
+i ~~ s
+
+# intercepts
+i ~ 1
+s ~ 1 
+
+cesdpa1 ~ 0
+cesdpa2 ~ 0
+cesdpa3 ~ 0
+cesdpa4 ~ 0
+cesdpa5 ~ 0
+cesdpa6 ~ 0
+'
+
+fit_pa <- 
+  growth(pa, 
+         data = health1)
+
+summary(fit_pa, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Now let's go bivariate. When doing this, make sure to include the within-lag residual covariances among the indicators. For more, check out Xiao Yang's [code](https://quantdev.ssri.psu.edu/tutorials/growth-modeling-chapter-8-multivariate-growth-models-and-dynamic-parameters).
+
+```{r}
+na_pa <- '  
+i_n =~ 1*cesdna1 + 1*cesdna2 + 1*cesdna3 + 1*cesdna4 + 1*cesdna5 + 1*cesdna6
+s_n =~ 0*cesdna1 + 1*cesdna2 + 2*cesdna3 + 3*cesdna4 + 4*cesdna5 + 5*cesdna6
+
+i_p =~ 1*cesdpa1 + 1*cesdpa2 + 1*cesdpa3 + 1*cesdpa4 + 1*cesdpa5 + 1*cesdpa6
+s_p =~ 0*cesdpa1 + 1*cesdpa2 + 2*cesdpa3 + 3*cesdpa4 + 4*cesdpa5 + 5*cesdpa6
+
+# variances
+i_n ~~ i_n
+s_n ~~ s_n
+
+i_p ~~ i_p
+s_p ~~ s_p
+
+# covariances
+i_n ~~ s_n
+i_p ~~ s_p
+
+i_n ~~ i_p
+s_n ~~ s_p
+
+i_n ~~ s_p
+i_p ~~ s_n
+
+# intercepts
+i_n ~ 1
+s_n ~ 1 
+
+i_p ~ 1
+s_p ~ 1 
+
+cesdna1 ~ 0
+cesdna2 ~ 0
+cesdna3 ~ 0
+cesdna4 ~ 0
+cesdna5 ~ 0
+cesdna6 ~ 0
+
+cesdpa1 ~ 0
+cesdpa2 ~ 0
+cesdpa3 ~ 0
+cesdpa4 ~ 0
+cesdpa5 ~ 0
+cesdpa6 ~ 0
+
+# within-lag covariances
+cesdna1 ~~ cesdpa1
+cesdna2 ~~ cesdpa2
+cesdna3 ~~ cesdpa3
+cesdna4 ~~ cesdpa4
+cesdna5 ~~ cesdpa5
+cesdna6 ~~ cesdpa6
+'
+
+fit_na_pa <- 
+  growth(na_pa, 
+         data = health1)
+
+summary(fit_na_pa, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Constrained
+
+```{r}
+na_pa_constrained <- '  
+i_n =~ 1*cesdna1 + 1*cesdna2 + 1*cesdna3 + 1*cesdna4 + 1*cesdna5 + 1*cesdna6
+s_n =~ 0*cesdna1 + 1*cesdna2 + 2*cesdna3 + 3*cesdna4 + 4*cesdna5 + 5*cesdna6
+
+i_p =~ 1*cesdpa1 + 1*cesdpa2 + 1*cesdpa3 + 1*cesdpa4 + 1*cesdpa5 + 1*cesdpa6
+s_p =~ 0*cesdpa1 + 1*cesdpa2 + 2*cesdpa3 + 3*cesdpa4 + 4*cesdpa5 + 5*cesdpa6
+
+# variances
+i_n ~~ i_n
+s_n ~~ s_n
+
+i_p ~~ i_p
+s_p ~~ s_p
+
+# covariances
+i_n ~~ s_n
+i_p ~~ s_p
+
+i_n ~~ i_p
+s_n ~~ s_p
+
+i_n ~~ s_p
+i_p ~~ s_n
+
+# intercepts
+i_n ~ 1
+s_n ~ 1 
+
+i_p ~ 1
+s_p ~ 1 
+
+cesdna1 ~ 0
+cesdna2 ~ 0
+cesdna3 ~ 0
+cesdna4 ~ 0
+cesdna5 ~ 0
+cesdna6 ~ 0
+
+cesdpa1 ~ 0
+cesdpa2 ~ 0
+cesdpa3 ~ 0
+cesdpa4 ~ 0
+cesdpa5 ~ 0
+cesdpa6 ~ 0
+
+# within-lag covariances, set equal
+cesdna1 ~~ rc*cesdpa1
+cesdna2 ~~ rc*cesdpa2
+cesdna3 ~~ rc*cesdpa3
+cesdna4 ~~ rc*cesdpa4
+cesdna5 ~~ rc*cesdpa5
+cesdna6 ~~ rc*cesdpa6
+
+# residual variances, set equal
+# cesdna1 ~~ rv1*cesdna1
+# cesdna2 ~~ rv1*cesdna2
+# cesdna3 ~~ rv1*cesdna3
+# cesdna4 ~~ rv1*cesdna4
+# cesdna5 ~~ rv1*cesdna5
+# cesdna6 ~~ rv1*cesdna6
+# 
+# cesdpa1 ~~ rv2*cesdpa1
+# cesdpa2 ~~ rv2*cesdpa2
+# cesdpa3 ~~ rv2*cesdpa3
+# cesdpa4 ~~ rv2*cesdpa4
+# cesdpa5 ~~ rv2*cesdpa5
+# cesdpa6 ~~ rv2*cesdpa6
+'
+
+fit_na_pa_constrained <- 
+  growth(na_pa_constrained, 
+         data = health1)
+
+summary(fit_na_pa_constrained, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+```{r}
+lavTestLRT(fit_na_pa, fit_na_pa_constrained)
 ```
 

@@ -1,0 +1,1499 @@
+---
+title: "09"
+author: "A Solomon Kurz"
+date: "`r format(Sys.Date())`"
+output:
+  github_document
+---
+
+```{r, echo = FALSE, cache = FALSE}
+options(width = 100)
+```
+
+# Latent Difference Score Models
+
+> The latent difference score model ([McArdle & Hamagami, 2001](https://pdfs.semanticscholar.org/936f/dd8b2874430efe1f1f264d18b628ca785e99.pdf); [McArdle & Nesselroade, 1994](https://www.questia.com/library/3195049/life-span-developmental-psychology-methodological)) is an extension of the simple difference (or gain) score approach to the analysis of change. Difference scores are computed by subtracting an earlier observed value from a later observed value. The latent difference score model extends this simple bivariate difference to consecutive intervals over many waves of a study. The result is a flexible modeling approach to the investigation of change. (p. 248)
+
+## Review of fundamental concepts
+
+> The central notion of the latent difference score model is that we can represent the diffe- rence between two consecutive measurements within the autoregressive structure. The residual from a simple autoregression is equal to the difference score if $y_t$ is regressed on $y_{t−1}$ with a regression slope equal to 1 (i.e., a perfect relationship). (p. 248)
+
+Given the formula for the simple autoregressive relationship
+
+$$y_{ti} = \beta_{t, t-1} y_{t-1, i} + \zeta_{ti},$$
+
+when $\beta_{t, t-1} = 1$, 
+
+$$
+\begin{align*}
+y_{ti} & = (1) y_{t-1, i} + \zeta_{ti} \\
+y_{ti} & = y_{t-1, i} + \zeta_{ti}, \text{ and thus} \\
+\zeta_{ti} & = y_{ti} - y_{t-1, i}.
+\end{align*}
+$$
+
+If we relable $\zeta_{ti}$ as $\Delta y_{t, t-1}$, we get
+
+$$
+\begin{align*}
+\Delta y_{t, t-1} & = y_{ti} - y_{t-1, i} \\
+y_{ti} & = y_{t-1, i} + \Delta y_{t, t-1, i},
+\end{align*}
+$$
+
+which is the foundation of the latent difference score. Within this paradigm, the simple difference score $\Delta y_{t, t-1, i}$ is reexpressed as $\Delta \eta_t$. Thus, the equation for the SEM is
+
+$$
+\begin{align*}
+y_2 & = (\beta_{21}) y_1 + (\lambda_{22}) \Delta \eta_2 + \zeta_2\\
+y_2 & = (1) y_1 + (1) \Delta \eta_2 + 0 \\
+y_2 & = y_1 + \Delta \eta_2.
+\end{align*}
+$$
+
+"Estimates obtained from a latent difference factor, therefore, equal estimates obtained from a simple calculation of differences from observed scores" (p. 250).
+
+## Latent difference score model for several occasions 
+
+### Model specification.
+
+In the absence of across-time equality constraints, the latent difference score model will always be just identified (i.e., $df = 0$).
+
+### Interpretation.
+
+"The average difference across all of the contiguous waves should be recognizable as the interpretation given to the slope in a linear growth curve analysis" (p. 251). Also, "the latent difference score model is equivalent to the simplex model if its autoregressive paths have been set equal to 1" (ibid). 
+
+### Example 9.1: Latent difference score model.
+
+Here we load the `health` data.
+
+```{r, warning = F, message = F}
+library(tidyverse)
+
+health1_names <- c("age", "srh1", "srh2", "srh3", "srh4", "srh5", "srh6", "bmi1",
+"bmi2", "bmi3", "bmi4", "bmi5", "bmi6", "cesdna1", "cesdpa1", "cesdso1",
+"cesdna2", "cesdpa2", "cesdso2", "cesdna3", "cesdpa3", "cesdso3",
+"cesdna4", "cesdpa4", "cesdso4", "cesdna5", "cesdpa5", "cesdso5",
+"cesdna6", "cesdpa6", "cesdso6", "diab1", "diab2", "diab3", "diab4", "diab5", "diab6")
+
+health1 <- 
+  read_table2("data/health.dat",
+              col_names = F) %>% 
+  set_names(health1_names)
+
+glimpse(health1)
+```
+
+We'll be modeling BMI trajectories across the 5,335 participants. To get a sense of the data, here we'll sample a random 50 cases and plot their empirical trajectories.
+
+```{r, fig.width = 6, fig.height = 3}
+set.seed(9)
+
+health1 %>% 
+  sample_n(size = 50) %>% 
+  mutate(id = 1:n()) %>% 
+  select(bmi1:bmi6, id) %>% 
+  gather(key, bmi, -id) %>% 
+  mutate(time = str_remove(key, "bmi") %>% as.double()) %>% 
+  
+  ggplot(aes(x = time, y = bmi, group = id)) +
+  geom_line(size = 1/3, alpha = 1/3) +
+  theme(panel.grid = element_blank())
+```
+
+So it looks like the estimates for $\Delta \text{bmi}_{t, t - 1, i}$ will be fairly small. Let's fire up lavaan.
+
+```{r, warning = F, message = F}
+library(lavaan)
+```
+
+We get the code for the first model from Newsom's `ex9-1.a.R` file.
+
+```{r}
+model9.1a <- ' 
+# define latent difference factors
+deta2 =~ 1*bmi2
+deta3 =~ 1*bmi3
+deta4 =~ 1*bmi4
+deta5 =~ 1*bmi5
+deta6 =~ 1*bmi6
+
+# autoregressive paths set to 1
+bmi2 ~ 1*bmi1
+bmi3 ~ 1*bmi2
+bmi4 ~ 1*bmi3
+bmi5 ~ 1*bmi4
+bmi6 ~ 1*bmi5
+
+# means and intercepts
+deta2 ~ 1 
+deta3 ~ 1
+deta4 ~ 1
+deta5 ~ 1
+deta6 ~ 1
+
+bmi1 ~ 1
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# estimate exogenous covariances
+bmi1  ~~ deta2 + deta3 + deta4 + deta5 + deta6
+deta2 ~~ deta3 + deta4 + deta5 + deta6
+deta3 ~~ deta4 + deta5 + deta6
+deta4 ~~ deta5 + deta6
+deta5 ~~ deta6
+
+# estimate exogenous variances
+bmi1 ~~ bmi1 
+
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+# disturbances set to 0
+bmi2 ~~ 0*bmi2
+bmi3 ~~ 0*bmi3
+bmi4 ~~ 0*bmi4
+bmi5 ~~ 0*bmi5
+bmi6 ~~ 0*bmi6
+'
+
+fit_9.1a <- 
+  sem(model9.1a,
+      data = health1)
+
+summary(fit_9.1a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Here's a focused look at the initial BMI mean and the latent differences.
+
+```{r}
+parameterestimates(fit_9.1a) %>% 
+  filter(op == "~1") %>% 
+  filter(lhs == "bmi1" | str_detect(lhs, "deta")) %>% 
+  arrange(lhs) %>% 
+  select(lhs:op, est, starts_with("ci"))
+```
+
+In the text, Newsom said the estimates were very close to the empirical estimates. We might compute those like so.
+
+```{r}
+d <-
+  health1 %>% 
+  transmute(deta2 = bmi2 - bmi1,
+            deta3 = bmi3 - bmi2,
+            deta4 = bmi4 - bmi3,
+            deta5 = bmi5 - bmi4,
+            deta6 = bmi6 - bmi5) %>% 
+  gather() %>% 
+  group_by(key) %>% 
+  summarise(mean = mean(value))
+
+d
+```
+
+Yep, those are pretty close. Here's what those difference estimates look like in a coefficient plot. The empirical estimates are the red dots superimposed on the model estimates.
+
+```{r, fig.width = 6, fig.height = 3}
+parameterestimates(fit_9.1a) %>% 
+  filter(op == "~1" & 
+           str_detect(lhs, "deta")) %>% 
+  mutate(time = str_remove(lhs, "deta") %>% as.double()) %>% 
+  
+  ggplot(aes(x = time)) +
+  geom_pointrange(aes(y = est, ymin = ci.lower, ymax = ci.upper),
+                  size = 1) +
+  geom_point(data = d %>% mutate(time = str_remove(key, "deta") %>% as.double()),
+             aes(y = mean),
+             color = "red") +
+  ylab(expression(paste(Delta,alpha))) +
+  theme(panel.grid = element_blank())
+```
+
+Just for kicks, here are the latent variances, $\psi_{[ii]}$.
+
+```{r, fig.width = 6, fig.height = 3}
+parameterestimates(fit_9.1a) %>% 
+  filter(op == "~~" & 
+           str_detect(lhs, "deta") & 
+           lhs == rhs) %>% 
+  mutate(time = str_remove(lhs, "deta") %>% as.double()) %>% 
+  
+  ggplot(aes(x = time)) +
+  geom_pointrange(aes(y = est, ymin = ci.lower, ymax = ci.upper),
+                  size = 1) +
+  ylab(expression(psi)) +
+  theme(panel.grid = element_blank())
+```
+
+In next model, Newsom constrained the $\Delta \alpha$ parameters to equality. He didn't show that code in one of his `.R` files. However, it's just a minor extension of the `model9.1a` code, above. We just add some equality constraints with parameter labels.
+
+```{r}
+model9.1b <- ' 
+# define latent difference factors
+deta2 =~ 1*bmi2
+deta3 =~ 1*bmi3
+deta4 =~ 1*bmi4
+deta5 =~ 1*bmi5
+deta6 =~ 1*bmi6
+
+# autoregressive paths set to 1
+bmi2 ~ 1*bmi1
+bmi3 ~ 1*bmi2
+bmi4 ~ 1*bmi3
+bmi5 ~ 1*bmi4
+bmi6 ~ 1*bmi5
+
+# means and intercepts
+deta2 ~ a*1  # here are the new parts of the code
+deta3 ~ a*1
+deta4 ~ a*1
+deta5 ~ a*1
+deta6 ~ a*1
+
+bmi1 ~ 1
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# estimate exogenous covariances
+bmi1  ~~ deta2 + deta3 + deta4 + deta5 + deta6
+deta2 ~~ deta3 + deta4 + deta5 + deta6
+deta3 ~~ deta4 + deta5 + deta6
+deta4 ~~ deta5 + deta6
+deta5 ~~ deta6
+
+# estimate exogenous variances
+bmi1 ~~ bmi1 
+
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+# disturbances set to 0
+bmi2 ~~ 0*bmi2
+bmi3 ~~ 0*bmi3
+bmi4 ~~ 0*bmi4
+bmi5 ~~ 0*bmi5
+bmi6 ~~ 0*bmi6
+'
+
+fit_9.1b <- 
+  sem(model9.1b,
+      data = health1)
+
+summary(fit_9.1b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+The results for our likelihood ratio test match those in the text. The constrained model fits the data statistically significantly worse.
+
+```{r}
+lavTestLRT(fit_9.1a, fit_9.1b)
+```
+
+## Binary variables and ordinal variables
+
+> With noncontinuous variables, latent difference factors represent change in the logit or probit function and require transformation using the appropriate cdf (see Chapter 1 for a review of this transformation). As a natural circumstance of contingency table analyses for binary and ordinal variables, the mean of each difference factor will not be precisely equal to the difference in proportions for binary or ordinal models ([Agresti, 2013](https://www.wiley.com/en-us/Categorical+Data+Analysis%2C+3rd+Edition-p-9780470463635)). Thus, researchers only should present the difference factor mean as an approximation of the mean difference. Constraint of the difference factor means can provide an omnibus test of all proportion differences. (p. 253)
+
+### Example 9.2: Latent difference score model with binary variables.
+
+We get the code for the next model from Newsom's `ex9-2.R` file.
+
+```{r}
+model9.2a <- ' 
+# define latent factors for each measured variable
+eta1 =~ 1*diab1
+eta2 =~ 1*diab2
+eta3 =~ 1*diab3
+eta4 =~ 1*diab4
+eta5 =~ 1*diab5
+eta6 =~ 1*diab6
+
+# define latent difference factors
+deta2 =~ 1*eta2
+deta3 =~ 1*eta3
+deta4 =~ 1*eta4
+deta5 =~ 1*eta5
+deta6 =~ 1*eta6
+
+# autoregressive paths set to 1
+eta2 ~ 1*eta1
+eta3 ~ 1*eta2
+eta4 ~ 1*eta3
+eta5 ~ 1*eta4
+eta6 ~ 1*eta5
+
+# means, intercepts, and thresholds
+deta2 ~ 1  # do deta2 ~ a*1 etc to test for equal mean differences
+deta3 ~ 1
+deta4 ~ 1
+deta5 ~ 1
+deta6 ~ 1
+
+eta2 ~ 0
+eta3 ~ 0
+eta4 ~ 0
+eta5 ~ 0
+eta6 ~ 0
+
+diab1 | 0*t1
+diab2 | 0*t1
+diab3 | 0*t1
+diab4 | 0*t1
+diab5 | 0*t1
+diab6 | 0*t1
+
+eta1 ~ 1  # verify this
+
+# set covariances among difference factors to 0 for identification
+eta1  ~~ deta2 + deta3 + deta4 + deta5 + deta6
+deta2 ~~ 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta3 ~~ 0*deta4 + 0*deta5 + 0*deta6
+deta4 ~~ 0*deta5 + 0*deta6
+deta5 ~~ 0*deta6
+
+# estimate exogenous variances
+eta1 ~~ eta1  # this may be problemtatic! verify
+
+deta2 ~~ a*deta2  # set variances equal for identification
+deta3 ~~ a*deta3
+deta4 ~~ a*deta4
+deta5 ~~ a*deta5
+deta6 ~~ a*deta6
+
+# autoregressive disturbances
+eta2 ~~ 0*eta2
+eta3 ~~ 0*eta3
+eta4 ~~ 0*eta4
+eta5 ~~ 0*eta5
+eta6 ~~ 0*eta6
+	  
+diab1 ~*~ diab1 
+diab2 ~*~ diab2
+diab3 ~*~ diab3
+diab4 ~*~ diab4
+diab5 ~*~ diab5
+diab6 ~*~ diab6 
+'
+
+fit_9.2a <- 
+  sem(model9.2a,
+      data = health1,
+      estimator = "wlsmv", 
+      ordered = str_c("diab", 1:6))
+
+summary(fit_9.2a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+As indicated in the text, "the initial model did not converge" (p. 253). However, our code above already fixed the variances of the difference factors to equality. We did so with the `a*` labels. So somehow, Newsom is doing something further that we haven't yet done. You can also tell this because our model $\chi^2$ and $df$ don't match with those he reported in the text.
+
+```{r}
+fitmeasures(fit_9.2a, c("chisq.scaled", "df"))
+```
+
+We get closer if we constrain the scales for $y^*$ and the variance for `eta1` to equality.
+
+```{r}
+model9.2b <- ' 
+# define latent factors for each measured variable
+eta1 =~ 1*diab1
+eta2 =~ 1*diab2
+eta3 =~ 1*diab3
+eta4 =~ 1*diab4
+eta5 =~ 1*diab5
+eta6 =~ 1*diab6
+
+# define latent difference factors
+deta2 =~ 1*eta2
+deta3 =~ 1*eta3
+deta4 =~ 1*eta4
+deta5 =~ 1*eta5
+deta6 =~ 1*eta6
+
+# autoregressive paths set to 1
+eta2 ~ 1*eta1
+eta3 ~ 1*eta2
+eta4 ~ 1*eta3
+eta5 ~ 1*eta4
+eta6 ~ 1*eta5
+
+# means, intercepts, and thresholds
+deta2 ~ 1  # do deta2 ~ a*1 etc to test for equal mean differences
+deta3 ~ 1
+deta4 ~ 1
+deta5 ~ 1
+deta6 ~ 1
+
+eta2 ~ 0
+eta3 ~ 0
+eta4 ~ 0
+eta5 ~ 0
+eta6 ~ 0
+
+diab1 | 0*t1
+diab2 | 0*t1
+diab3 | 0*t1
+diab4 | 0*t1
+diab5 | 0*t1
+diab6 | 0*t1
+
+eta1 ~ 1  # verify this
+
+# set covariances among difference factors to 0 for identification
+eta1  ~~ deta2 + deta3 + deta4 + deta5 + deta6
+deta2 ~~ 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta3 ~~ 0*deta4 + 0*deta5 + 0*deta6
+deta4 ~~ 0*deta5 + 0*deta6
+deta5 ~~ 0*deta6
+
+# estimate exogenous variances
+eta1 ~~ b*eta1  # this may be problemtatic! verify
+
+deta2 ~~ a*deta2  # set variances equal for identification
+deta3 ~~ a*deta3
+deta4 ~~ a*deta4
+deta5 ~~ a*deta5
+deta6 ~~ a*deta6
+
+# autoregressive disturbances
+eta2 ~~ 0*eta2
+eta3 ~~ 0*eta3
+eta4 ~~ 0*eta4
+eta5 ~~ 0*eta5
+eta6 ~~ 0*eta6
+	  
+diab1 ~*~ b*diab1 
+diab2 ~*~ b*diab2
+diab3 ~*~ b*diab3
+diab4 ~*~ b*diab4
+diab5 ~*~ b*diab5
+diab6 ~*~ b*diab6 
+'
+
+fit_9.2b <- 
+  sem(model9.2b,
+      data = health1,
+      estimator = "wlsmv", 
+      ordered = str_c("diab", 1:6))
+
+summary(fit_9.2b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+We're really close.
+
+```{r}
+fitmeasures(fit_9.2b, c("chisq.scaled", "df", "pvalue.scaled", "cfi", "rmsea.scaled", "wrmr"))
+```
+
+Here's a focused look at the mean estimate for Wave 1.
+
+```{r}
+parameterestimates(fit_9.2b) %>% 
+  filter(op == "~1"& 
+           lhs == "eta1") %>% 
+  select(lhs:op, est, starts_with("ci"))
+```
+
+We can use `pnorm()` to transform the estimate to a proportion metric.
+
+```{r}
+pnorm(-1.338331)
+```
+
+Here's a focused look at the estimates for the difference scores.
+
+```{r}
+d <-
+  parameterestimates(fit_9.2b) %>% 
+  filter(op == "~1" &
+           str_detect(lhs, "deta")) %>% 
+  select(lhs:op, est, starts_with("ci"))
+
+d
+```
+
+Here we use `dnorm()` to attempt to convert the difference scores to proportions.
+
+```{r}
+d %>% 
+  mutate(proportion = map_dbl(est, dnorm))
+```
+
+When you compare our `proportion` values to those in the text, we have clearly gone wrong and I'm not sure where. If you have the answer, [please share](https://github.com/ASKurz/Longidutinal-SEMing/issues). 
+
+Moving forward, here we constrain means of the difference factors to equality.
+
+```{r}
+model9.2c <- ' 
+# define latent factors for each measured variable
+eta1 =~ 1*diab1
+eta2 =~ 1*diab2
+eta3 =~ 1*diab3
+eta4 =~ 1*diab4
+eta5 =~ 1*diab5
+eta6 =~ 1*diab6
+
+# define latent difference factors
+deta2 =~ 1*eta2
+deta3 =~ 1*eta3
+deta4 =~ 1*eta4
+deta5 =~ 1*eta5
+deta6 =~ 1*eta6
+
+# autoregressive paths set to 1
+eta2 ~ 1*eta1
+eta3 ~ 1*eta2
+eta4 ~ 1*eta3
+eta5 ~ 1*eta4
+eta6 ~ 1*eta5
+
+# means, intercepts, and thresholds
+deta2 ~ c*1
+deta3 ~ c*1
+deta4 ~ c*1
+deta5 ~ c*1
+deta6 ~ c*1
+
+eta2 ~ 0
+eta3 ~ 0
+eta4 ~ 0
+eta5 ~ 0
+eta6 ~ 0
+
+diab1 | 0*t1
+diab2 | 0*t1
+diab3 | 0*t1
+diab4 | 0*t1
+diab5 | 0*t1
+diab6 | 0*t1
+
+eta1 ~ 1  # verify this
+
+# set covariances among difference factors to 0 for identification
+eta1  ~~ deta2 + deta3 + deta4 + deta5 + deta6
+deta2 ~~ 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta3 ~~ 0*deta4 + 0*deta5 + 0*deta6
+deta4 ~~ 0*deta5 + 0*deta6
+deta5 ~~ 0*deta6
+
+# estimate exogenous variances
+eta1 ~~ b*eta1  # this may be problemtatic! verify
+
+deta2 ~~ a*deta2  # set variances equal for identification
+deta3 ~~ a*deta3
+deta4 ~~ a*deta4
+deta5 ~~ a*deta5
+deta6 ~~ a*deta6
+
+# autoregressive disturbances
+eta2 ~~ 0*eta2
+eta3 ~~ 0*eta3
+eta4 ~~ 0*eta4
+eta5 ~~ 0*eta5
+eta6 ~~ 0*eta6
+	  
+diab1 ~*~ b*diab1 
+diab2 ~*~ b*diab2
+diab3 ~*~ b*diab3
+diab4 ~*~ b*diab4
+diab5 ~*~ b*diab5
+diab6 ~*~ b*diab6 
+'
+
+fit_9.2c <- 
+  sem(model9.2c,
+      data = health1,
+      estimator = "wlsmv", 
+      ordered = str_c("diab", 1:6))
+
+summary(fit_9.2c, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Our likelihood ratio test is similar to the one in the text.
+
+```{r}
+lavTestLRT(fit_9.2b, fit_9.2c)
+```
+
+## Latent difference score model with added intercept and slope factors 
+
+> One elaboration of the basic latent difference score model is to specify an intercept and slope factor with the difference score factors serving as indicators of higher-order slope factor (e.g., [McArdle, 2001](https://pdfs.semanticscholar.org/936f/dd8b2874430efe1f1f264d18b628ca785e99.pdf)). Depicted in Figure 9.3, the model resembles the linear latent growth curve model in which slope loadings are set according to a time metric (e.g., $0, 1, 2,... T - 1$)...
+>
+> Because the indicators for the slope factor represent difference scores between consecutive time points rather than single observed scores, the interpretation of the average slope is not the same as the interpretation of the slope factor in the linear growth curve model. If the difference scores are equal across intervals, the slope mean will be equal to 0. Such a result can be interpreted as a constant rate of change--the same as a linear increase or decrease over time ([Grimm, An, McArdle, Zonderman, & Resnick, 2012](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3638891/)). In fact, setting all of the loadings for the slope factor equal to 1 would be an alternative way to represent the linear growth curve model. The mean of the slope factor for such a model would be equal to the average of the $T - 1$ difference factor means estimated by imposing longitudinal equality constraints on the means of the difference score factors. For a latent difference score model with added intercept and slope, a positive mean for a slope factor specified with linear increasing loadings (e.g., $0, 1, 2,... T - 1$) would indicate that the rate of change at each interval is increasing rather than constant. (p. 254)
+
+### Example 9.3: Latent difference score with added intercept and slope factors.
+
+Newsom provided the code for this model in his `ex9-3.R` file. As in the text, we'll fit the initial model by freely-estimating the variances of the upper-level intercepts and slopes.
+
+```{r}
+model9.3a <- ' 
+# define latent difference factors
+deta2 =~ 1*bmi2
+deta3 =~ 1*bmi3
+deta4 =~ 1*bmi4
+deta5 =~ 1*bmi5
+deta6 =~ 1*bmi6
+
+# add intercept and slope factors
+i =~ 1*bmi1
+s =~ 0*bmi1 + 1*deta2 + 2*deta3 + 3*deta4 + 4*deta5 + 5*deta6
+
+i ~~ i
+s ~~ s
+i ~~ s
+
+i ~ 1
+s ~ 1
+
+# autoregressive paths set to 1
+bmi2 ~ 1*bmi1
+bmi3 ~ 1*bmi2
+bmi4 ~ 1*bmi3
+bmi5 ~ 1*bmi4
+bmi6 ~ 1*bmi5
+
+# means and intercepts
+deta2 ~ 0
+deta3 ~ 0
+deta4 ~ 0
+deta5 ~ 0
+deta6 ~ 0
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# set all exogenous covariances to zero
+bmi1  ~~ 0*deta2 + 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta2 ~~ 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta3 ~~ 0*deta4 + 0*deta5 + 0*deta6
+deta4 ~~ 0*deta5 + 0*deta6
+deta5 ~~ 0*deta6
+
+# estimate exogenous variances
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+# disturbances set to 0
+bmi1 ~~ 0*bmi1
+bmi2 ~~ 0*bmi2
+bmi3 ~~ 0*bmi3
+bmi4 ~~ 0*bmi4
+bmi5 ~~ 0*bmi5
+bmi6 ~~ 0*bmi6
+'
+
+fit_9.3a <- 
+  sem(model9.3a,
+      data = health1)
+
+summary(fit_9.3a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Just like Newsom reported, this yields a Heywood case for the upper-level slope.
+
+```{r}
+parameterestimates(fit_9.3a) %>% 
+  filter(lhs == "s" &
+           op == "~~") %>% 
+  select(-(se:pvalue))
+```
+
+Now we fix $\psi_{11}$ to 1.
+
+```{r}
+model9.3b <- ' 
+# define latent difference factors
+deta2 =~ 1*bmi2
+deta3 =~ 1*bmi3
+deta4 =~ 1*bmi4
+deta5 =~ 1*bmi5
+deta6 =~ 1*bmi6
+
+# add intercept and slope factors
+i =~ 1*bmi1
+s =~ 0*bmi1 + 1*deta2 + 2*deta3 + 3*deta4 + 4*deta5 + 5*deta6
+
+i ~~ i
+s ~~ 1*s  # slope variance set for convergence
+i ~~ s
+
+i ~ 1
+s ~ 1
+
+# autoregressive paths set to 1
+bmi2 ~ 1*bmi1
+bmi3 ~ 1*bmi2
+bmi4 ~ 1*bmi3
+bmi5 ~ 1*bmi4
+bmi6 ~ 1*bmi5
+
+# means and intercepts
+deta2 ~ 0
+deta3 ~ 0
+deta4 ~ 0
+deta5 ~ 0
+deta6 ~ 0
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# set all exogenous covariances to zero
+bmi1  ~~ 0*deta2 + 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta2 ~~ 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta3 ~~ 0*deta4 + 0*deta5 + 0*deta6
+deta4 ~~ 0*deta5 + 0*deta6
+deta5 ~~ 0*deta6
+
+# estimate exogenous variances
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+# disturbances set to 0
+bmi1 ~~ 0*bmi1
+bmi2 ~~ 0*bmi2
+bmi3 ~~ 0*bmi3
+bmi4 ~~ 0*bmi4
+bmi5 ~~ 0*bmi5
+bmi6 ~~ 0*bmi6
+'
+
+fit_9.3b <- 
+  sem(model9.3b,
+      data = health1)
+
+summary(fit_9.3b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+This model was a poor fit to the data.
+
+```{r}
+fitmeasures(fit_9.3b, c("chisq", "df", "pvalue", "cfi", "srmr", "rmsea"))
+```
+
+Here's a focused look at the estimates for $\alpha_0$ and $\alpha_1$.
+
+```{r}
+parameterestimates(fit_9.3b) %>% 
+  filter(op == "~1" &
+           lhs %in% c("i", "s")) %>% 
+  select(lhs:op, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+## Latent dual change score model
+
+"A variation on the latent difference score model is to add a lagged effect of the observed variable measured at the prior occasion on the difference factor" (p. 255). The basic equation follows the form
+
+$$
+\begin{align*}
+\Delta \eta_t & = y_{t - 1} - y \\
+\Delta \eta_t & \beta_{\Delta \eta_t, y_{t - 1}} y_{t - 1},
+\end{align*}
+$$
+
+where $\beta_{\Delta \eta_t, y_{t - 1}}$ is often called a *self-feedback effect* or a *proportional change effect*. When these are added to a model with higher-level intercept and slope factors, it's often referred to as a *dual change score model*.
+
+### Example 9.4: Dual change score model.
+
+There's a bit of a discrepancy in the text. Just before Example 9.4, Newsom wrote:
+
+> When the self-feedback effect is incorporated into a latent difference score model with intercept and slope parameters, it is referred to as a *dual change score* model. The term "dual" is used because two components of change are represented – self-feedback and the rate of change estimated by the slope factor. (p. 256, *emphasis* in the original)
+
+However, if you look the code in his `ex9-4.R` file, you’ll note that model, which matches with the results he reported in Example 9.4, does not contain an upper-level intercept or slope. Here's his model.
+
+```{r}
+model9.4a <- ' 
+# define latent difference factors
+deta2 =~ 1*bmi2
+deta3 =~ 1*bmi3
+deta4 =~ 1*bmi4
+deta5 =~ 1*bmi5
+deta6 =~ 1*bmi6
+
+# autoregressive paths set to 1
+bmi2 ~ 1*bmi1
+bmi3 ~ 1*bmi2
+bmi4 ~ 1*bmi3
+bmi5 ~ 1*bmi4
+bmi6 ~ 1*bmi5
+
+# self-feedback effects for dual change score model
+deta2 ~ bmi1
+deta3 ~ bmi2
+deta4 ~ bmi3
+deta5 ~ bmi4
+deta6 ~ bmi5
+
+# means and intercepts
+deta2 ~ 1
+deta3 ~ 1
+deta4 ~ 1
+deta5 ~ 1
+deta6 ~ 1
+
+bmi1 ~ 1
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# set all exogenous covariances to zero
+bmi1  ~~ 0*deta2 + 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta2 ~~ 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta3 ~~ 0*deta4 + 0*deta5 + 0*deta6
+deta4 ~~ 0*deta5 + 0*deta6
+deta5 ~~ 0*deta6
+
+# estimate exogenous variances
+bmi1  ~~ bmi1
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+# disturbances set to 0
+bmi2 ~~ 0*bmi2
+bmi3 ~~ 0*bmi3
+bmi4 ~~ 0*bmi4
+bmi5 ~~ 0*bmi5
+bmi6 ~~ 0*bmi6
+'
+
+fit_9.4a <- 
+  sem(model9.4a,
+      data = health1)
+
+summary(fit_9.4a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Here's a focused look at the estimates for the self-feedback coefficients.
+
+```{r}
+parameterestimates(fit_9.4a) %>% 
+  filter(op == "~" &
+           str_detect(lhs, "deta")) %>% 
+  select(-(se:pvalue)) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+They are all small and clearly negative.
+
+Now we'll explore fitting a version of this model including the upper-level intercepts and slopes. The model code is an extension of our `model9.3a`, above. You'll note that unlike with `model9.3b`, here we freely estimate the $\psi_{11}$ parameter. The model will converge just fine.
+
+```{r}
+model9.4b <- ' 
+# define latent difference factors
+deta2 =~ 1*bmi2
+deta3 =~ 1*bmi3
+deta4 =~ 1*bmi4
+deta5 =~ 1*bmi5
+deta6 =~ 1*bmi6
+
+# add intercept and slope factors
+i =~ 1*bmi1
+s =~ 0*bmi1 + 1*deta2 + 2*deta3 + 3*deta4 + 4*deta5 + 5*deta6
+
+i ~~ i
+s ~~ s
+i ~~ s
+
+i ~ 1
+s ~ 1
+
+# autoregressive paths set to 1
+bmi2 ~ 1*bmi1
+bmi3 ~ 1*bmi2
+bmi4 ~ 1*bmi3
+bmi5 ~ 1*bmi4
+bmi6 ~ 1*bmi5
+
+# self-feedback effects for dual change score model
+deta2 ~ bmi1
+deta3 ~ bmi2
+deta4 ~ bmi3
+deta5 ~ bmi4
+deta6 ~ bmi5
+
+# means and intercepts
+deta2 ~ 0
+deta3 ~ 0
+deta4 ~ 0
+deta5 ~ 0
+deta6 ~ 0
+
+bmi1 ~ 0
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# set all exogenous covariances to zero
+bmi1  ~~ 0*deta2 + 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta2 ~~ 0*deta3 + 0*deta4 + 0*deta5 + 0*deta6
+deta3 ~~ 0*deta4 + 0*deta5 + 0*deta6
+deta4 ~~ 0*deta5 + 0*deta6
+deta5 ~~ 0*deta6
+
+# estimate exogenous variances
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+# disturbances set to 0
+bmi1 ~~ 0*bmi1
+bmi2 ~~ 0*bmi2
+bmi3 ~~ 0*bmi3
+bmi4 ~~ 0*bmi4
+bmi5 ~~ 0*bmi5
+bmi6 ~~ 0*bmi6
+'
+
+fit_9.4b <- 
+  sem(model9.4b,
+      data = health1)
+
+summary(fit_9.4b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Here's a focused look at the estimates for the self-feedback coefficients.
+
+```{r}
+parameterestimates(fit_9.4b) %>% 
+  filter(op == "~" &
+           str_detect(lhs, "deta")) %>% 
+  select(-(se:pvalue)) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+They are in a different metric than the ones from `fit_9.4a`. But as before, they're all clearly negative. Happily, both models suggest
+
+> that higher scores on BMI at the preceding time point were associated with smaller increases in BMI across the subsequent interval. Alternatively stated, lower BMI scores at the preceding time point were associated with larger increases in BMI across the subsequent interval. These relationships are consistent with the pattern expected with regression toward the mean. (p. 256)
+
+## Covariates
+
+We can throw both time-invariant and time-varying covariates into the mix. "Similar to concerns raised with regard to latent growth curve models, means of the latent difference score factors will usually be more interpretable when the covariate has been centered" (p. 257). As discussed in Chapter 7, we have many options for centering when the covariates vary over time. We can also add these to models with higher-level intercepts and slopes.
+
+> Constraining slope factor loadings to be equal to 1 would be an alternative strategy for estimating the effects of the covariate on average linear change across waves and would be conceptually equivalent to the effect of the covariate on the slope in a linear growth curve model. Inclusion of time-varying covariates in a model with added intercept and slope factor would allow for an estimation of the average intercept and slope factors adjusted for the covariate. (p. 258)
+
+### Example 9.5: Including time-invariant and time-varying covariates.
+
+We'll need to make a mean-centered version of `age`.
+
+```{r}
+health1 <-
+  health1 %>% 
+  mutate(age_c = age - mean(age))
+```
+
+Just for kicks, here’s a look at the distributions of our two `age` variables.
+
+```{r, fig.width = 6, fig.height = 2}
+health1 %>% 
+  select(starts_with("age")) %>% 
+  gather() %>% 
+  
+  ggplot(aes(x = value)) +
+  geom_density(size = 0, fill = "grey50") +
+  scale_y_continuous(NULL, breaks = NULL) +
+  xlab(NULL) +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~key, scales = "free")
+```
+
+Newsom provided the code in the `ex9-5a.R` file.
+
+```{r}
+model9.5a <- ' 
+# define latent difference factors
+deta2 =~ 1*bmi2
+deta3 =~ 1*bmi3
+deta4 =~ 1*bmi4
+deta5 =~ 1*bmi5
+deta6 =~ 1*bmi6
+
+# autoregressive paths set to 1
+bmi2 ~ 1*bmi1
+bmi3 ~ 1*bmi2
+bmi4 ~ 1*bmi3
+bmi5 ~ 1*bmi4
+bmi6 ~ 1*bmi5
+
+# means and intercepts
+deta2 ~ 1
+deta3 ~ 1
+deta4 ~ 1
+deta5 ~ 1
+deta6 ~ 1
+
+bmi1 ~ 1
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# estimate all exogenous covariances
+bmi1  ~~ deta2 + deta3 + deta4 + deta5 + deta6
+deta2 ~~ deta3 + deta4 + deta5 + deta6
+deta3 ~~ deta4 + deta5 + deta6
+deta4 ~~ deta5 + deta6
+deta5 ~~ deta6
+
+# estimate exogenous variances
+bmi1  ~~ bmi1
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+# disturbances set to 0
+bmi2 ~~ 0*bmi2
+bmi3 ~~ 0*bmi3
+bmi4 ~~ 0*bmi4
+bmi5 ~~ 0*bmi5
+bmi6 ~~ 0*bmi6
+
+# add time-invariant covariate
+bmi1  ~ age_c
+deta2 ~ age_c 
+deta3 ~ age_c
+deta4 ~ age_c
+deta5 ~ age_c
+deta6 ~ age_c
+'
+
+fit_9.5a <- 
+  sem(model9.5a,
+      data = health1)
+
+summary(fit_9.5a, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Here is a focused look at the unstandardized and standardized $\beta$ estimates.
+
+```{r}
+parameterestimates(fit_9.5a) %>% 
+  filter(op == "~" & 
+           rhs == "age_c") %>% 
+  select(-(se:pvalue)) %>% 
+  mutate_if(is.double, round, digits = 3)
+
+standardizedsolution(fit_9.5a) %>% 
+  filter(op == "~" & 
+           rhs == "age_c") %>% 
+  select(-(se:pvalue)) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+For kicks, here's a coefficient plot of the standardized solution.
+
+```{r, fig.width = 6, fig.height = 3}
+standardizedsolution(fit_9.5a) %>% 
+  filter(op == "~" & 
+           rhs == "age_c") %>% 
+
+  ggplot(aes(x = lhs, y = est.std, ymin = ci.lower, ymax = ci.upper)) +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_pointrange() +
+  labs(x = "criterion",
+       y = expression(paste(beta[italic(i)][1]))) +
+  theme(panel.grid = element_blank())
+```
+
+"The negative coefficients indicate that there were larger changes in BMI for younger participants" (p. 258).
+
+The next model uses self-rated health (i.e., `srh1` through `srh5`) as a time-varying predictor of the difference latents (i.e., `deta2` through `deta6`) in subsequent time points. The self-rated health scores were centered at the baseline mean following the formula
+
+$$\text{self-rated health}_t^* = \text{self-rated health}_{ti} = \overline{\text{self-rated health}}_1.$$
+
+Let's compute them.
+
+```{r}
+health1 <-
+  health1 %>% 
+  mutate(srh1_c = srh1 - mean(srh1),
+         srh2_c = srh2 - mean(srh1),
+         srh3_c = srh3 - mean(srh1),
+         srh4_c = srh4 - mean(srh1),
+         srh5_c = srh5 - mean(srh1))
+```
+
+Newsom didn't provide the code in a `ex9-5b.R` file, so we'll just have to do our best. This attempt is based on an alteration of the code from the last model.
+
+```{r}
+model9.5b <- ' 
+# define latent difference factors
+deta2 =~ 1*bmi2
+deta3 =~ 1*bmi3
+deta4 =~ 1*bmi4
+deta5 =~ 1*bmi5
+deta6 =~ 1*bmi6
+
+# autoregressive paths set to 1
+bmi2 ~ 1*bmi1
+bmi3 ~ 1*bmi2
+bmi4 ~ 1*bmi3
+bmi5 ~ 1*bmi4
+bmi6 ~ 1*bmi5
+
+# means and intercepts
+deta2 ~ 1
+deta3 ~ 1
+deta4 ~ 1
+deta5 ~ 1
+deta6 ~ 1
+
+bmi1 ~ 1
+bmi2 ~ 0
+bmi3 ~ 0
+bmi4 ~ 0
+bmi5 ~ 0
+bmi6 ~ 0
+
+# estimate all exogenous covariances
+bmi1  ~~ deta2 + deta3 + deta4 + deta5 + deta6
+deta2 ~~ deta3 + deta4 + deta5 + deta6
+deta3 ~~ deta4 + deta5 + deta6
+deta4 ~~ deta5 + deta6
+deta5 ~~ deta6
+
+# estimate exogenous variances
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+# disturbances set to 0
+bmi2 ~~ 0*bmi2
+bmi3 ~~ 0*bmi3
+bmi4 ~~ 0*bmi4
+bmi5 ~~ 0*bmi5
+bmi6 ~~ 0*bmi6
+
+# add time-varying covariate(s)
+bmi1  ~ srh1_c
+deta2 ~ srh1_c 
+deta3 ~ srh2_c
+deta4 ~ srh3_c
+deta5 ~ srh4_c
+deta6 ~ srh5_c
+'
+
+fit_9.5b <- 
+  sem(model9.5b,
+      data = health1)
+
+summary(fit_9.5b, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+Our results differ slightly from those Newsom reported in the text. I'm not clear why. Here's a focused look at our estimates for $\beta_{11}$, unstandardized and standardized.
+
+```{r}
+parameterestimates(fit_9.5b) %>% 
+  filter(op == "~" &
+           lhs == "bmi1") %>% 
+  select(-(se:pvalue)) %>% 
+  mutate_if(is.double, round, digits = 3)
+
+standardizedsolution(fit_9.5b) %>% 
+  filter(op == "~" &
+           lhs == "bmi1") %>% 
+  select(-(se:pvalue)) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Here are the unstandardized lagged effects.
+
+```{r}
+parameterestimates(fit_9.5b) %>% 
+  filter(op == "~" &
+           str_detect(lhs, "deta")) %>% 
+  select(-(se:pvalue)) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Here our pattern of results is just different from the one Newsom reported in the text. Here's what it looks like in a coefficient plot.
+
+```{r, fig.width = 6, fig.height = 3}
+parameterestimates(fit_9.5b) %>% 
+  filter(op == "~" &
+           str_detect(lhs, "deta")) %>% 
+
+  ggplot(aes(x = lhs, y = est, ymin = ci.lower, ymax = ci.upper)) +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_pointrange() +
+  labs(x = "criterion",
+       y = expression(paste(beta[italic(t + 1)][italic(",t")]))) +
+  theme(panel.grid = element_blank())
+```
+
+## Simultaneous latent difference score models
+
+> Two or more latent difference score models can be estimated simultaneously, also referred to as bivariate or multivariate latent difference score models... Using the notion that a lagged time-varying covariate rep- resents a difference score regression, the simultaneous latent difference score can be stated in terms of the effect of the difference score of a predictor variable on the difference score for an outcome, or $\Delta y$ regressed on $\Delta x$. If path coefficients between the difference score factors at each occasion are held constant across time, then the simultaneous latent difference score model is equivalent to the fixed effects regression model covered in Chapter 5 ([Allison, 2005](https://www.amazon.com/Fixed-Effects-Regression-Methods-Longitudinal/dp/1590475682)). (pp. 258--259).
+
+## Latent difference scores with multiple indicators
+
+> As with other models, it is important to establish measurement invariance and, at minimum, longitudinal equality constraints are placed on intercepts and loadings. There are several advantages to the use of multiple indicators, but the advantages do not extend to the estimate of the average of the difference score factor, because the expected value of any observed variable is not biased by random measurement error. 
+>
+> As with other models, the factor identification method should be carefully considered when interpreting difference scores. Referent indicator identification will lead to difference score factors that are primarily based on the indicator variable. The interpretation of the difference factors can be improved by using the effects coding identification method ([Little, Slegers, & Card, 2006](http://www.agencylab.ku.edu/~agencylab/manuscripts/(Little,%20Slegers,%20Card,%202006).pdf)), which will lead to difference scores that reflect differences between weighted averages of the indicators at each consecutive time point. (pp. 259--260)
+
+### Example 9.6: Latent difference score model with multiple indicators.
+
+Newsom provided the code in the `ex9-6.R` file.
+
+```{r}
+model9.6 <- ' 
+# define latent difference factors
+eta1 =~ NA*cesdna1 + l1*cesdna1 + l2*cesdpa1 + l3*cesdso1
+eta2 =~ NA*cesdna2 + l1*cesdna2 + l2*cesdpa2 + l3*cesdso2
+eta3 =~ NA*cesdna3 + l1*cesdna3 + l2*cesdpa3 + l3*cesdso3
+eta4 =~ NA*cesdna4 + l1*cesdna4 + l2*cesdpa4 + l3*cesdso4
+eta5 =~ NA*cesdna5 + l1*cesdna5 + l2*cesdpa5 + l3*cesdso5
+eta6 =~ NA*cesdna6 + l1*cesdna6 + l2*cesdpa6 + l3*cesdso6
+	
+# define latent difference factors
+deta2 =~ 1*eta2
+deta3 =~ 1*eta3
+deta4 =~ 1*eta4
+deta5 =~ 1*eta5
+deta6 =~ 1*eta6
+
+# autoregressive paths set to 1
+eta2 ~ 1*eta1
+eta3 ~ 1*eta2
+eta4 ~ 1*eta3
+eta5 ~ 1*eta4
+eta6 ~ 1*eta5
+
+# means and intercepts
+cesdna1 ~ n1*1
+cesdpa1 ~ n2*1
+cesdso1 ~ n3*1
+
+cesdna2 ~ n1*1
+cesdpa2 ~ n2*1
+cesdso2 ~ n3*1
+
+cesdna3 ~ n1*1
+cesdpa3 ~ n2*1
+cesdso3 ~ n3*1
+
+cesdna4 ~ n1*1
+cesdpa4 ~ n2*1
+cesdso4 ~ n3*1
+
+cesdna5 ~ n1*1
+cesdpa5 ~ n2*1
+cesdso5 ~ n3*1
+
+cesdna6 ~ n1*1
+cesdpa6 ~ n2*1
+cesdso6 ~ n3*1
+
+deta2 ~ 1
+deta3 ~ 1
+deta4 ~ 1
+deta5 ~ 1
+deta6 ~ 1
+
+eta1 ~ 1
+eta2 ~ 0
+eta3 ~ 0
+eta4 ~ 0
+eta5 ~ 0
+eta6 ~ 0
+
+# estimate all exogenous covariances
+eta1  ~~ deta2 + deta3 + deta4 + deta5 + deta6
+deta2 ~~ deta3 + deta4 + deta5 + deta6
+deta3 ~~ deta4 + deta5 + deta6
+deta4 ~~ deta5 + deta6
+deta5 ~~ deta6
+
+# correlated measurement residualts
+cesdna1 ~~ cesdna2 + cesdna3 + cesdna4 + cesdna5 + cesdna6
+cesdna2 ~~ cesdna3 + cesdna4 + cesdna5 + cesdna6
+cesdna3 ~~ cesdna4 + cesdna5 + cesdna6
+cesdna4 ~~ cesdna5 + cesdna6
+cesdna5 ~~ cesdna6
+cesdpa1 ~~ cesdpa2 + cesdpa3 + cesdpa4 + cesdpa5 + cesdpa6
+cesdpa2 ~~ cesdpa3 + cesdpa4 + cesdpa5 + cesdpa6
+cesdpa3 ~~ cesdpa4 + cesdpa5 + cesdpa6
+cesdpa4 ~~ cesdpa5 + cesdpa6
+cesdpa5 ~~ cesdpa6
+cesdso1 ~~ cesdso2 + cesdso3 + cesdso4 + cesdso5 + cesdso6
+cesdso2 ~~ cesdso3 + cesdso4 + cesdso5 + cesdso6
+cesdso3 ~~ cesdso4 + cesdso5 + cesdso6
+cesdso4 ~~ cesdso5 + cesdso6
+cesdso5 ~~ cesdso6
+
+# estimate exogenous variances
+eta1 ~~ eta1
+
+deta2 ~~ deta2
+deta3 ~~ deta3
+deta4 ~~ deta4
+deta5 ~~ deta5
+deta6 ~~ deta6
+
+eta2 ~~ 0*eta2
+eta3 ~~ 0*eta3
+eta4 ~~ 0*eta4
+eta5 ~~ 0*eta5
+eta6 ~~ 0*eta6
+
+# model constraint
+# effects coding factor identification
+l1 == 3 - l2 - l3
+n1 == 0 - n2 - n3 
+'
+
+fit_9.6 <- 
+  sem(model9.6,
+      data = health1)
+
+summary(fit_9.6, 
+        fit.measures = T, 
+        standardized = T, 
+        rsquare = T)
+```
+
+The model fit the data well, with our fit statistics matching those in the text, with the usual exception of the SRMR.
+
+```{r}
+fitmeasures(fit_9.6, c("chisq", "df", "pvalue", "cfi", "srmr", "rmsea"))
+```
+
+Here's a focused look at the standardized loadings for the CESD indicators.
+
+```{r}
+standardizedsolution(fit_9.6) %>% 
+  filter(op == "=~" &
+           str_detect(rhs, "cesd")) %>% 
+  arrange(est.std) %>% 
+  select(-(se:pvalue)) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Here they are in a faceted coefficient plot.
+
+```{r}
+standardizedsolution(fit_9.6) %>% 
+  filter(op == "=~" &
+           str_detect(rhs, "cesd")) %>% 
+  mutate(rhs = str_remove(rhs, "[1-6]")) %>% 
+  
+  ggplot(aes(x = 0, y = est.std, ymin = ci.lower, ymax = ci.upper)) +
+  geom_pointrange() +
+  scale_x_continuous(NULL, breaks = NULL) +
+  theme(panel.grid = element_blank()) +
+  facet_grid(rhs~lhs, scales = "free")
+```
+
+Here's a focused look at the mean of the baseline factor, $\eta_1$.
+
+```{r}
+parameterestimates(fit_9.6) %>% 
+  filter(op == "~1" &
+           lhs == "eta1") %>% 
+  select(lhs:op, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Here are the estimates for the means of the difference factors. They're all pretty small.
+
+```{r}
+parameterestimates(fit_9.6) %>% 
+  filter(op == "~1" &
+           str_detect(lhs, "deta")) %>% 
+  select(lhs:op, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+Now look at their variances.
+
+```{r}
+parameterestimates(fit_9.6) %>% 
+  filter(str_detect(lhs, "deta") &
+           lhs == rhs) %>% 
+  select(lhs:rhs, est, starts_with("ci")) %>% 
+  mutate_if(is.double, round, digits = 3)
+```
+
+## Comments
+
+> Latent difference score models are closely related to ANOVA, latent growth curve models, and simplex models. With certain modifications of the specifications, the same hypotheses about change can be tested. On the one hand, this indicates a greater flexibility of latent difference score models, because the general framework can be used for this subset of hypotheses or for other hypotheses. The main contrast to these other models is that latent difference score models estimate level changes across each particular interval. On the other hand, a disadvantage is that latent difference score models may be difficult to estimate for some variants and may need equality or other constraints. (p. 261)
+
+## Reference {-}
+
+[Newsom, J. T. (2015). *Longitudinal structural equation modelling: A comprehensive introduction*. London: Routledge.](http://www.longitudinalsem.com)
+
+## Session info {-}
+
+```{r}
+sessionInfo()
+```
+

@@ -1,0 +1,481 @@
+Mplus VERSION 7.4 (Mac)
+MUTHEN & MUTHEN
+12/11/2019   4:17 PM
+
+INPUT INSTRUCTIONS
+
+  TITLE:
+  Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mod
+  DATA:
+  FILE = "model10.1.a_44eb83e54906e3b5856364155a0534dd.dat";
+
+  VARIABLE:
+  NAMES = w1dbothd w1dsadd w1dblued w1ddepd;
+   MISSING=.;
+
+    usevariables = w1dbothd w1dsadd w1dblued w1ddepd;
+    categorical  = w1dbothd w1dsadd w1dblued w1ddepd;
+    classes = etac(2);
+
+  ANALYSIS:
+
+    type = mixture;
+
+  MODEL:
+
+    ! no model statements are needed, one-factor LCA estimated by default;
+    ! here's the optional specification;
+
+    %overall%
+    [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1];
+
+    ! class 1 mean estimated by default and cannot be specified;
+    %etac#1%
+    [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t1-t4);
+
+    ! class 2 mean set to 0 by default and cannot be modified;
+    %etac#2%
+    [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t5-t8);
+
+  OUTPUT:
+
+    ! conduct the LMR and the VLMR likelihood ratio tests;
+    tech11 tech14 cinterval;
+
+
+
+
+*** WARNING
+  Input line exceeded 90 characters. Some input may be truncated.
+  Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mode
+   1 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+
+
+
+
+Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mod
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                         574
+
+Number of dependent variables                                    4
+Number of independent variables                                  0
+Number of continuous latent variables                            0
+Number of categorical latent variables                           1
+
+Observed dependent variables
+
+  Binary and ordered categorical (ordinal)
+   W1DBOTHD    W1DSADD     W1DBLUED    W1DDEPD
+
+Categorical latent variables
+   ETAC
+
+
+Estimator                                                      MLR
+Information matrix                                        OBSERVED
+Optimization Specifications for the Quasi-Newton Algorithm for
+Continuous Outcomes
+  Maximum number of iterations                                 100
+  Convergence criterion                                  0.100D-05
+Optimization Specifications for the EM Algorithm
+  Maximum number of iterations                                 500
+  Convergence criteria
+    Loglikelihood change                                 0.100D-06
+    Relative loglikelihood change                        0.100D-06
+    Derivative                                           0.100D-05
+Optimization Specifications for the M step of the EM Algorithm for
+Categorical Latent variables
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-05
+  Basis for M step termination                           ITERATION
+Optimization Specifications for the M step of the EM Algorithm for
+Censored, Binary or Ordered Categorical (Ordinal), Unordered
+Categorical (Nominal) and Count Outcomes
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-05
+  Basis for M step termination                           ITERATION
+  Maximum value for logit thresholds                            15
+  Minimum value for logit thresholds                           -15
+  Minimum expected cell size for chi-square              0.100D-01
+Maximum number of iterations for H1                           2000
+Convergence criterion for H1                             0.100D-03
+Optimization algorithm                                         EMA
+Random Starts Specifications
+  Number of initial stage random starts                         20
+  Number of final stage optimizations                            4
+  Number of initial stage iterations                            10
+  Initial stage convergence criterion                    0.100D+01
+  Random starts scale                                    0.500D+01
+  Random seed for generating random starts                       0
+Link                                                         LOGIT
+
+Input data file(s)
+  model10.1.a_44eb83e54906e3b5856364155a0534dd.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of missing data patterns             1
+     Number of y missing data patterns           0
+     Number of u missing data patterns           1
+
+
+COVARIANCE COVERAGE OF DATA
+
+Minimum covariance coverage value   0.100
+
+
+UNIVARIATE PROPORTIONS AND COUNTS FOR CATEGORICAL VARIABLES
+
+    W1DBOTHD
+      Category 1    0.606          348.000
+      Category 2    0.394          226.000
+    W1DSADD
+      Category 1    0.620          356.000
+      Category 2    0.380          218.000
+    W1DBLUED
+      Category 1    0.617          354.000
+      Category 2    0.383          220.000
+    W1DDEPD
+      Category 1    0.598          343.000
+      Category 2    0.402          231.000
+
+
+RANDOM STARTS RESULTS RANKED FROM THE BEST TO THE WORST LOGLIKELIHOOD VALUES
+
+Final stage loglikelihood values at local maxima, seeds, and initial stage start numbers:
+
+           -1410.775  533738           11
+           -1410.775  27071            15
+           -1410.775  unperturbed      0
+           -1410.775  195873           6
+
+
+
+THE BEST LOGLIKELIHOOD VALUE HAS BEEN REPLICATED.  RERUN WITH AT LEAST TWICE THE
+RANDOM STARTS TO CHECK THAT THE BEST LOGLIKELIHOOD IS STILL OBTAINED AND REPLICATED.
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                        9
+
+Loglikelihood
+
+          H0 Value                       -1410.775
+          H0 Scaling Correction Factor      1.0324
+            for MLR
+
+Information Criteria
+
+          Akaike (AIC)                    2839.550
+          Bayesian (BIC)                  2878.724
+          Sample-Size Adjusted BIC        2850.153
+            (n* = (n + 2) / 24)
+
+Chi-Square Test of Model Fit for the Binary and Ordered Categorical
+(Ordinal) Outcomes
+
+          Pearson Chi-Square
+
+          Value                             13.090
+          Degrees of Freedom                     6
+          P-Value                           0.0416
+
+          Likelihood Ratio Chi-Square
+
+          Value                             12.739
+          Degrees of Freedom                     6
+          P-Value                           0.0474
+
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON THE ESTIMATED MODEL
+
+    Latent
+   Classes
+
+       1        244.18720          0.42541
+       2        329.81280          0.57459
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON ESTIMATED POSTERIOR PROBABILITIES
+
+    Latent
+   Classes
+
+       1        244.18720          0.42541
+       2        329.81280          0.57459
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON THEIR MOST LIKELY LATENT CLASS MEMBERSHIP
+
+Class Counts and Proportions
+
+    Latent
+   Classes
+
+       1              249          0.43380
+       2              325          0.56620
+
+
+CLASSIFICATION QUALITY
+
+     Entropy                         0.638
+
+
+Average Latent Class Probabilities for Most Likely Latent Class Membership (Row)
+by Latent Class (Column)
+
+           1        2
+
+    1   0.871    0.129
+    2   0.084    0.916
+
+
+Classification Probabilities for the Most Likely Latent Class Membership (Column)
+by Latent Class (Row)
+
+           1        2
+
+    1   0.888    0.112
+    2   0.098    0.902
+
+
+Logits for the Classification Probabilities for the Most Likely Latent Class Membership (Column)
+by Latent Class (Row)
+
+              1        2
+
+    1      2.069    0.000
+    2     -2.224    0.000
+
+
+MODEL RESULTS
+
+                                                    Two-Tailed
+                    Estimate       S.E.  Est./S.E.    P-Value
+
+Latent Class 1
+
+ Thresholds
+    W1DBOTHD$1        -0.392      0.166     -2.356      0.018
+    W1DSADD$1         -1.015      0.248     -4.093      0.000
+    W1DBLUED$1        -0.780      0.208     -3.756      0.000
+    W1DDEPD$1         -1.217      0.287     -4.240      0.000
+
+Latent Class 2
+
+ Thresholds
+    W1DBOTHD$1         1.134      0.174      6.520      0.000
+    W1DSADD$1          2.016      0.312      6.457      0.000
+    W1DBLUED$1         1.663      0.234      7.098      0.000
+    W1DDEPD$1          1.908      0.285      6.685      0.000
+
+Categorical Latent Variables
+
+ Means
+    ETAC#1            -0.301      0.188     -1.595      0.111
+
+
+RESULTS IN PROBABILITY SCALE
+
+Latent Class 1
+
+ W1DBOTHD
+    Category 1         0.403      0.040     10.069      0.000
+    Category 2         0.597      0.040     14.902      0.000
+ W1DSADD
+    Category 1         0.266      0.048      5.494      0.000
+    Category 2         0.734      0.048     15.159      0.000
+ W1DBLUED
+    Category 1         0.314      0.045      7.024      0.000
+    Category 2         0.686      0.045     15.321      0.000
+ W1DDEPD
+    Category 1         0.229      0.051      4.518      0.000
+    Category 2         0.771      0.051     15.251      0.000
+
+Latent Class 2
+
+ W1DBOTHD
+    Category 1         0.757      0.032     23.621      0.000
+    Category 2         0.243      0.032      7.599      0.000
+ W1DSADD
+    Category 1         0.882      0.032     27.250      0.000
+    Category 2         0.118      0.032      3.630      0.000
+ W1DBLUED
+    Category 1         0.841      0.031     26.783      0.000
+    Category 2         0.159      0.031      5.078      0.000
+ W1DDEPD
+    Category 1         0.871      0.032     27.115      0.000
+    Category 2         0.129      0.032      4.024      0.000
+
+
+LATENT CLASS ODDS RATIO RESULTS
+
+Latent Class 1 Compared to Latent Class 2
+
+ W1DBOTHD
+    Category > 1       4.600      1.128      4.079      0.000
+ W1DSADD
+    Category > 1      20.712      7.447      2.781      0.005
+ W1DBLUED
+    Category > 1      11.504      3.321      3.464      0.001
+ W1DDEPD
+    Category > 1      22.746      8.190      2.777      0.005
+
+
+QUALITY OF NUMERICAL RESULTS
+
+     Condition Number for the Information Matrix              0.460E-01
+       (ratio of smallest to largest eigenvalue)
+
+
+CONFIDENCE INTERVALS OF MODEL RESULTS
+
+                  Lower .5%  Lower 2.5%    Lower 5%    Estimate    Upper 5%  Upper 2.5%   Upper .5%
+
+Latent Class 1
+
+ Thresholds
+    W1DBOTHD$1      -0.821      -0.718      -0.666      -0.392      -0.118      -0.066       0.037
+    W1DSADD$1       -1.654      -1.501      -1.423      -1.015      -0.607      -0.529      -0.376
+    W1DBLUED$1      -1.315      -1.187      -1.122      -0.780      -0.438      -0.373      -0.245
+    W1DDEPD$1       -1.956      -1.779      -1.689      -1.217      -0.745      -0.654      -0.478
+
+Latent Class 2
+
+ Thresholds
+    W1DBOTHD$1       0.686       0.793       0.848       1.134       1.420       1.475       1.582
+    W1DSADD$1        1.212       1.404       1.502       2.016       2.529       2.628       2.820
+    W1DBLUED$1       1.059       1.204       1.277       1.663       2.048       2.122       2.266
+    W1DDEPD$1        1.173       1.348       1.438       1.908       2.377       2.467       2.643
+
+Categorical Latent Variables
+
+ Means
+    ETAC#1          -0.786      -0.670      -0.611      -0.301       0.009       0.069       0.185
+
+
+CONFIDENCE INTERVALS IN PROBABILITY SCALE
+
+Latent Class 1
+
+ W1DBOTHD
+    Category 1       0.300       0.325       0.337       0.403       0.469       0.482       0.506
+    Category 2       0.494       0.518       0.531       0.597       0.663       0.675       0.700
+ W1DSADD
+    Category 1       0.141       0.171       0.186       0.266       0.346       0.361       0.391
+    Category 2       0.609       0.639       0.654       0.734       0.814       0.829       0.859
+ W1DBLUED
+    Category 1       0.199       0.227       0.241       0.314       0.388       0.402       0.430
+    Category 2       0.570       0.598       0.612       0.686       0.759       0.773       0.801
+ W1DDEPD
+    Category 1       0.098       0.129       0.145       0.229       0.312       0.328       0.359
+    Category 2       0.641       0.672       0.688       0.771       0.855       0.871       0.902
+
+Latent Class 2
+
+ W1DBOTHD
+    Category 1       0.674       0.694       0.704       0.757       0.809       0.819       0.839
+    Category 2       0.161       0.181       0.191       0.243       0.296       0.306       0.326
+ W1DSADD
+    Category 1       0.799       0.819       0.829       0.882       0.936       0.946       0.966
+    Category 2       0.034       0.054       0.064       0.118       0.171       0.181       0.201
+ W1DBLUED
+    Category 1       0.760       0.779       0.789       0.841       0.892       0.902       0.921
+    Category 2       0.079       0.098       0.108       0.159       0.211       0.221       0.240
+ W1DDEPD
+    Category 1       0.788       0.808       0.818       0.871       0.924       0.934       0.953
+    Category 2       0.047       0.066       0.076       0.129       0.182       0.192       0.212
+
+
+CONFIDENCE INTERVALS FOR THE LATENT CLASS ODDS RATIO RESULTS
+
+Latent Class 1 Compared to Latent Class 2
+
+ W1DBOTHD
+    Category > 1     2.446       2.845       3.073       4.600       6.886       7.439       8.651
+ W1DSADD
+    Category > 1     8.204      10.237      11.464      20.712      37.419      41.906      52.292
+ W1DBLUED
+    Category > 1     5.469       6.533       7.155      11.504      18.497      20.258      24.199
+ W1DDEPD
+    Category > 1     8.998      11.231      12.580      22.746      41.127      46.066      57.501
+
+
+TECHNICAL 11 OUTPUT
+
+     Random Starts Specifications for the k-1 Class Analysis Model
+        Number of initial stage random starts                  20
+        Number of final stage optimizations                     4
+
+
+
+     VUONG-LO-MENDELL-RUBIN LIKELIHOOD RATIO TEST FOR 1 (H0) VERSUS 2 CLASSES
+
+          H0 Loglikelihood Value                        -1534.865
+          2 Times the Loglikelihood Difference            248.180
+          Difference in the Number of Parameters                5
+          Mean                                              4.676
+          Standard Deviation                                5.511
+          P-Value                                          0.0000
+
+     LO-MENDELL-RUBIN ADJUSTED LRT TEST
+
+          Value                                           240.605
+          P-Value                                          0.0000
+
+
+TECHNICAL 14 OUTPUT
+
+     Random Starts Specifications for the k-1 Class Analysis Model
+        Number of initial stage random starts                  20
+        Number of final stage optimizations                     4
+
+     Random Starts Specification for the k-1 Class Model for Generated Data
+        Number of initial stage random starts                   0
+        Number of final stage optimizations for the
+           initial stage random starts                          0
+     Random Starts Specification for the k Class Model for Generated Data
+        Number of initial stage random starts                  40
+        Number of final stage optimizations                     8
+     Number of bootstrap draws requested                   Varies
+
+
+     PARAMETRIC BOOTSTRAPPED LIKELIHOOD RATIO TEST FOR 1 (H0) VERSUS 2 CLASSES
+
+          H0 Loglikelihood Value                        -1534.865
+          2 Times the Loglikelihood Difference            248.180
+          Difference in the Number of Parameters                5
+          Approximate P-Value                              0.0000
+          Successful Bootstrap Draws                            5
+
+
+     Beginning Time:  16:17:09
+        Ending Time:  16:17:15
+       Elapsed Time:  00:00:06
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2015 Muthen & Muthen

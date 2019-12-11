@@ -1,0 +1,29 @@
+TITLE:
+Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;
+DATA:
+FILE = "model3.3.a_cfdcd2d9d0069820543612d3e12d7d7a.dat";
+ 
+VARIABLE:
+NAMES = diab1 diab2 diab3 diab4 diab5 diab6; 
+ MISSING=.;
+ 
+  usevariables = diab1 diab2 diab3 diab4 diab5 diab6;
+  categorical  =       diab2 diab3 diab4 diab5 diab6;
+  
+ANALYSIS:
+
+  type = general; 
+  estimator = ml;
+  
+MODEL:
+
+  !observed variable (manifest) model;
+	[diab1@0];
+	diab2 on diab1;
+  diab3 on diab2; 
+	diab4 on diab3;
+  diab5 on diab4;
+  diab6 on diab5;
+  
+OUTPUT:
+cinterval

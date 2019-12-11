@@ -1,0 +1,405 @@
+Mplus VERSION 7.4 (Mac)
+MUTHEN & MUTHEN
+12/11/2019   4:17 PM
+
+INPUT INSTRUCTIONS
+
+  TITLE:
+  Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mod
+  DATA:
+  FILE = "model10.1.c_b41994407510ca35fe5ee8270c289614.dat";
+
+  VARIABLE:
+  NAMES = w1happy w1enjoy w1satis w1joyful w1please;
+   MISSING=.;
+
+    usevariables = w1happy w1enjoy w1satis w1joyful w1please;
+    classes = etac (3);
+
+  ANALYSIS:
+
+    type = mixture;
+
+  MODEL:
+
+    ! no model statements are needed to obtain basic latent profile model;
+
+  OUTPUT:
+
+    ! conduct the LMR and the VLMR likelihood ratio tests;
+    tech11 cinterval;
+
+
+
+
+*** WARNING
+  Input line exceeded 90 characters. Some input may be truncated.
+  Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mode
+*** WARNING in MODEL command
+  All variables are uncorrelated with all other variables within class.
+  Check that this is what is intended.
+   2 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+
+
+
+
+Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mod
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                         574
+
+Number of dependent variables                                    5
+Number of independent variables                                  0
+Number of continuous latent variables                            0
+Number of categorical latent variables                           1
+
+Observed dependent variables
+
+  Continuous
+   W1HAPPY     W1ENJOY     W1SATIS     W1JOYFUL    W1PLEASE
+
+Categorical latent variables
+   ETAC
+
+
+Estimator                                                      MLR
+Information matrix                                        OBSERVED
+Optimization Specifications for the Quasi-Newton Algorithm for
+Continuous Outcomes
+  Maximum number of iterations                                 100
+  Convergence criterion                                  0.100D-05
+Optimization Specifications for the EM Algorithm
+  Maximum number of iterations                                 500
+  Convergence criteria
+    Loglikelihood change                                 0.100D-06
+    Relative loglikelihood change                        0.100D-06
+    Derivative                                           0.100D-05
+Optimization Specifications for the M step of the EM Algorithm for
+Categorical Latent variables
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-05
+  Basis for M step termination                           ITERATION
+Optimization Specifications for the M step of the EM Algorithm for
+Censored, Binary or Ordered Categorical (Ordinal), Unordered
+Categorical (Nominal) and Count Outcomes
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-05
+  Basis for M step termination                           ITERATION
+  Maximum value for logit thresholds                            15
+  Minimum value for logit thresholds                           -15
+  Minimum expected cell size for chi-square              0.100D-01
+Maximum number of iterations for H1                           2000
+Convergence criterion for H1                             0.100D-03
+Optimization algorithm                                         EMA
+Random Starts Specifications
+  Number of initial stage random starts                         20
+  Number of final stage optimizations                            4
+  Number of initial stage iterations                            10
+  Initial stage convergence criterion                    0.100D+01
+  Random starts scale                                    0.500D+01
+  Random seed for generating random starts                       0
+
+Input data file(s)
+  model10.1.c_b41994407510ca35fe5ee8270c289614.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of missing data patterns             1
+     Number of y missing data patterns           1
+     Number of u missing data patterns           0
+
+
+COVARIANCE COVERAGE OF DATA
+
+Minimum covariance coverage value   0.100
+
+
+     PROPORTION OF DATA PRESENT FOR Y
+
+
+           Covariance Coverage
+              W1HAPPY       W1ENJOY       W1SATIS       W1JOYFUL      W1PLEASE
+              ________      ________      ________      ________      ________
+ W1HAPPY        1.000
+ W1ENJOY        1.000         1.000
+ W1SATIS        1.000         1.000         1.000
+ W1JOYFUL       1.000         1.000         1.000         1.000
+ W1PLEASE       1.000         1.000         1.000         1.000         1.000
+
+
+RANDOM STARTS RESULTS RANKED FROM THE BEST TO THE WORST LOGLIKELIHOOD VALUES
+
+Final stage loglikelihood values at local maxima, seeds, and initial stage start numbers:
+
+           -3140.472  637345           19
+           -3140.472  107446           12
+           -3140.472  unperturbed      0
+           -3140.472  127215           9
+
+
+
+THE BEST LOGLIKELIHOOD VALUE HAS BEEN REPLICATED.  RERUN WITH AT LEAST TWICE THE
+RANDOM STARTS TO CHECK THAT THE BEST LOGLIKELIHOOD IS STILL OBTAINED AND REPLICATED.
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                       22
+
+Loglikelihood
+
+          H0 Value                       -3140.472
+          H0 Scaling Correction Factor      1.2213
+            for MLR
+
+Information Criteria
+
+          Akaike (AIC)                    6324.944
+          Bayesian (BIC)                  6420.702
+          Sample-Size Adjusted BIC        6350.861
+            (n* = (n + 2) / 24)
+
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON THE ESTIMATED MODEL
+
+    Latent
+   Classes
+
+       1        118.08270          0.20572
+       2        359.43099          0.62619
+       3         96.48631          0.16809
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON ESTIMATED POSTERIOR PROBABILITIES
+
+    Latent
+   Classes
+
+       1        118.08272          0.20572
+       2        359.43096          0.62619
+       3         96.48632          0.16809
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON THEIR MOST LIKELY LATENT CLASS MEMBERSHIP
+
+Class Counts and Proportions
+
+    Latent
+   Classes
+
+       1              107          0.18641
+       2              383          0.66725
+       3               84          0.14634
+
+
+CLASSIFICATION QUALITY
+
+     Entropy                         0.790
+
+
+Average Latent Class Probabilities for Most Likely Latent Class Membership (Row)
+by Latent Class (Column)
+
+           1        2        3
+
+    1   0.911    0.089    0.000
+    2   0.054    0.898    0.048
+    3   0.000    0.072    0.928
+
+
+Classification Probabilities for the Most Likely Latent Class Membership (Column)
+by Latent Class (Row)
+
+           1        2        3
+
+    1   0.826    0.174    0.000
+    2   0.026    0.957    0.017
+    3   0.000    0.192    0.808
+
+
+Logits for the Classification Probabilities for the Most Likely Latent Class Membership (Column)
+by Latent Class (Row)
+
+              1        2        3
+
+    1     13.624   12.069    0.000
+    2      0.456    4.046    0.000
+    3    -13.603   -1.438    0.000
+
+
+MODEL RESULTS
+
+                                                    Two-Tailed
+                    Estimate       S.E.  Est./S.E.    P-Value
+
+Latent Class 1
+
+ Means
+    W1HAPPY            2.167      0.146     14.817      0.000
+    W1ENJOY            2.243      0.098     22.984      0.000
+    W1SATIS            2.218      0.096     23.210      0.000
+    W1JOYFUL           2.103      0.120     17.475      0.000
+    W1PLEASE           2.253      0.118     19.145      0.000
+
+ Variances
+    W1HAPPY            0.389      0.027     14.216      0.000
+    W1ENJOY            0.422      0.035     12.106      0.000
+    W1SATIS            0.415      0.031     13.316      0.000
+    W1JOYFUL           0.434      0.041     10.645      0.000
+    W1PLEASE           0.333      0.030     11.181      0.000
+
+Latent Class 2
+
+ Means
+    W1HAPPY            3.121      0.064     48.610      0.000
+    W1ENJOY            3.097      0.089     34.693      0.000
+    W1SATIS            3.028      0.067     44.961      0.000
+    W1JOYFUL           3.024      0.088     34.555      0.000
+    W1PLEASE           3.015      0.057     53.068      0.000
+
+ Variances
+    W1HAPPY            0.389      0.027     14.216      0.000
+    W1ENJOY            0.422      0.035     12.106      0.000
+    W1SATIS            0.415      0.031     13.316      0.000
+    W1JOYFUL           0.434      0.041     10.645      0.000
+    W1PLEASE           0.333      0.030     11.181      0.000
+
+Latent Class 3
+
+ Means
+    W1HAPPY            3.837      0.104     36.913      0.000
+    W1ENJOY            4.115      0.104     39.536      0.000
+    W1SATIS            3.966      0.165     24.045      0.000
+    W1JOYFUL           4.101      0.106     38.844      0.000
+    W1PLEASE           3.850      0.145     26.485      0.000
+
+ Variances
+    W1HAPPY            0.389      0.027     14.216      0.000
+    W1ENJOY            0.422      0.035     12.106      0.000
+    W1SATIS            0.415      0.031     13.316      0.000
+    W1JOYFUL           0.434      0.041     10.645      0.000
+    W1PLEASE           0.333      0.030     11.181      0.000
+
+Categorical Latent Variables
+
+ Means
+    ETAC#1             0.202      0.431      0.468      0.639
+    ETAC#2             1.315      0.252      5.224      0.000
+
+
+QUALITY OF NUMERICAL RESULTS
+
+     Condition Number for the Information Matrix              0.568E-02
+       (ratio of smallest to largest eigenvalue)
+
+
+CONFIDENCE INTERVALS OF MODEL RESULTS
+
+                  Lower .5%  Lower 2.5%    Lower 5%    Estimate    Upper 5%  Upper 2.5%   Upper .5%
+
+Latent Class 1
+
+ Means
+    W1HAPPY          1.790       1.880       1.926       2.167       2.407       2.453       2.543
+    W1ENJOY          1.991       2.051       2.082       2.243       2.403       2.434       2.494
+    W1SATIS          1.972       2.031       2.061       2.218       2.375       2.405       2.464
+    W1JOYFUL         1.793       1.867       1.905       2.103       2.301       2.339       2.413
+    W1PLEASE         1.949       2.022       2.059       2.253       2.446       2.483       2.556
+
+ Variances
+    W1HAPPY          0.318       0.335       0.344       0.389       0.434       0.442       0.459
+    W1ENJOY          0.332       0.353       0.364       0.422       0.479       0.490       0.511
+    W1SATIS          0.335       0.354       0.364       0.415       0.467       0.477       0.496
+    W1JOYFUL         0.329       0.354       0.367       0.434       0.501       0.514       0.539
+    W1PLEASE         0.256       0.275       0.284       0.333       0.382       0.391       0.410
+
+Latent Class 2
+
+ Means
+    W1HAPPY          2.956       2.995       3.016       3.121       3.227       3.247       3.287
+    W1ENJOY          2.867       2.922       2.950       3.097       3.244       3.272       3.327
+    W1SATIS          2.855       2.896       2.917       3.028       3.139       3.160       3.202
+    W1JOYFUL         2.799       2.853       2.880       3.024       3.168       3.196       3.250
+    W1PLEASE         2.868       2.903       2.921       3.015       3.108       3.126       3.161
+
+ Variances
+    W1HAPPY          0.318       0.335       0.344       0.389       0.434       0.442       0.459
+    W1ENJOY          0.332       0.353       0.364       0.422       0.479       0.490       0.511
+    W1SATIS          0.335       0.354       0.364       0.415       0.467       0.477       0.496
+    W1JOYFUL         0.329       0.354       0.367       0.434       0.501       0.514       0.539
+    W1PLEASE         0.256       0.275       0.284       0.333       0.382       0.391       0.410
+
+Latent Class 3
+
+ Means
+    W1HAPPY          3.569       3.633       3.666       3.837       4.008       4.041       4.105
+    W1ENJOY          3.847       3.911       3.944       4.115       4.286       4.319       4.383
+    W1SATIS          3.541       3.643       3.695       3.966       4.237       4.289       4.391
+    W1JOYFUL         3.829       3.894       3.927       4.101       4.274       4.308       4.373
+    W1PLEASE         3.476       3.565       3.611       3.850       4.089       4.135       4.225
+
+ Variances
+    W1HAPPY          0.318       0.335       0.344       0.389       0.434       0.442       0.459
+    W1ENJOY          0.332       0.353       0.364       0.422       0.479       0.490       0.511
+    W1SATIS          0.335       0.354       0.364       0.415       0.467       0.477       0.496
+    W1JOYFUL         0.329       0.354       0.367       0.434       0.501       0.514       0.539
+    W1PLEASE         0.256       0.275       0.284       0.333       0.382       0.391       0.410
+
+Categorical Latent Variables
+
+ Means
+    ETAC#1          -0.909      -0.643      -0.507       0.202       0.911       1.047       1.313
+    ETAC#2           0.667       0.822       0.901       1.315       1.729       1.809       1.964
+
+
+TECHNICAL 11 OUTPUT
+
+     Random Starts Specifications for the k-1 Class Analysis Model
+        Number of initial stage random starts                  20
+        Number of final stage optimizations                     4
+
+
+
+     VUONG-LO-MENDELL-RUBIN LIKELIHOOD RATIO TEST FOR 2 (H0) VERSUS 3 CLASSES
+
+          H0 Loglikelihood Value                        -3262.158
+          2 Times the Loglikelihood Difference            243.371
+          Difference in the Number of Parameters                6
+          Mean                                            -39.505
+          Standard Deviation                              110.970
+          P-Value                                          0.0009
+
+     LO-MENDELL-RUBIN ADJUSTED LRT TEST
+
+          Value                                           237.150
+          P-Value                                          0.0010
+
+
+     Beginning Time:  16:17:19
+        Ending Time:  16:17:20
+       Elapsed Time:  00:00:01
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2015 Muthen & Muthen

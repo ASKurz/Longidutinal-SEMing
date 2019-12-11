@@ -1,0 +1,1137 @@
+---
+title: "10"
+author: "A Solomon Kurz"
+date: "`r format(Sys.Date())`"
+output:
+  github_document
+---
+
+```{r, echo = FALSE, cache = FALSE}
+options(width = 100)
+```
+
+# Latent Transition and Growth Mixture Models
+
+> SEM is generally concerned with continuous latent variables, but it is also possible to conceptualize latent variables as categorical. The basic multiple-indicator model in which the latent variable is categorical is usually referred to as a latent class model ([Lazarsfeld & Henry, 1968](http://www.worldcat.org/title/latent-structure-analysis/oclc/433623); [Goodman, 1974](https://www.jstor.org/stable/pdf/2776792.pdf?casa_token=NLElBmQ-72kAAAAA:7fZ6wc3ITo9DxC3J425CJp8kQ9mxCvlEOO-pv-u9zVSShdR3t6T_DPu56u3Rfb0RQJHQrZ96tU3pGR6chWZm8el_1GppUPAYd4MFJVO1d-pQCbz77hxX)). Either exploratory or confirmatory approaches to latent class models are possible, analogous to the distinction between exploratory and confirmatory factor analysis. (p. 264)
+
+## Latent class analysis
+
+### Basic concepts.
+
+> Latent class estimation is a process of estimating membership in an unknown group, which differs conceptually from the concept of the factor model. Factor analysis involving continuous latent variables could be said to cluster items, whereas latent class analysis involving categorical latent variables could be said to cluster cases. (p. 265)
+
+### Binary indicators.
+
+> For binary indicators, the latent class model has two parameters of principal interest – the predicted probability of class membership of a case and the conditional probability that $y_{ij} = 1$ on the observed indicator that takes into account class membership, usually referred to as the response probability. The index $i$ designates an individual case and $j$ designates a particular indicator. (p. 265)
+
+Each item gets a threshold $\tau_{jc}$. There are $C - 1$ mean estimates, $\alpha_c$, with the mean of the first class set to zero as the referent class.
+
+#### Class membership probabilities.
+
+On page 276, we read "the unconditional probability of latent class membership is an exponential function of the latent class mean, $\alpha_c$." The formula for the intercept-only model with two classes is 
+
+$$\hat \pi_c = P (\eta_i^C = c) = \frac{e^{\alpha_c}}{1 + e^{\alpha_c}}.$$
+
+With more than two classes, we still keep $c = 1$ as the referent class, but broaden the formula to
+
+$$\hat \pi_c = \frac{e^{\alpha_c}}{\displaystyle \sum_{c = 1}^C e^{\alpha_c}}$$
+
+where $\alpha_{c = 1} = 0$, and thus $e^0 = 1$. "The odds of membership in one class versus the referent class can be computed by exponentiating the latent class mean, $e^{\alpha_c} = \hat \pi_c / \hat \pi_0$, where $\hat \pi_0$ is the probability of membership in the referent class" (p. 266). Because the classes are exclusive, it is also the case that
+
+$$\sum_{c = 1}^C \hat \pi_c = 1,$$
+
+presuming conditional independence.
+
+#### Response probabilities.
+
+> The second parameter of importance is the indicator threshold. The indicator threshold contains information about the conditional probability that a particular indicator will be equal to 1 given class membership. These conditional probabilities are referred to as *response probabilities*. (p. 266, *emphasis* in the original)
+
+Within the logistic regression paradigm, the thresholds are given in a log-odds metric. You can convert a threshold into a conditional probability, $\hat p_{j | c}$, with the formula
+
+$$P (y_{ij} = 1 | \eta^C = c) = \hat p_{j | c} = \frac{e^{\tau_{jc}}}{1 + e^{\tau_{jc}}}.$$
+
+The closer $\hat p_{j | c}$ is to 0 or 1, the better the item is at discriminating among classes.
+
+#### The latent class model.
+
+> The statistical model for latent class analysis states that an observed pattern of responses is equal to the sum of the product of the class membership and the response probabilities across classes. A case has a particular pattern of values on the indicators if it falls into a particular cell of the contingency table formed by crossing all indicators. (p. 267)
+
+The general formula for the latent class model is
+
+$$
+P (\mathbf Y = \mathbf y) = \sum_{c = 1}^C \hat \pi_c \prod_{j = 1}^J \hat p_{j | c}, \text{where}
+$$
+
+> $\mathbf Y$ is a vector of possible values, $\mathbf y$ is a vector representing a particular observed pattern, and $P (\mathbf Y = \mathbf y)$ is the probability of a particular response pattern across all of the binary $y$ indicators. The symboln $\prod$ is the product operator, indicating the product of the conditional probabilities across all $J$ indicators. The formula therefore states that a particular response pattern on the indicators is a function of the predicted latent class membership probability and the product of all the conditional probabilities for the values of the indicators.
+
+#### Entropy.
+
+> Probability of individual class membership can then be used to summarize the overall accuracy of classification or class separation. Although there are several possible measures of accuracy, the entropy index, E, which represents a kind of average of the natural log of all class membership probabilities, is the most frequently employed
+([Ramaswamy, DeSarbo, Reibstein, & Robinson, 1993](https://www.researchgate.net/profile/Wayne_Desarbo/publication/227442033_An_Empirical_Pooling_Approach_for_Estimating_Marketing_Mix_Elasticities_with_PIMS_Data/links/552d44730cf21acb09215310.pdf)). (pp. 268--269)
+
+$E$ follows the formula:
+
+$$
+E = \frac{\displaystyle \sum_{i = 1}^N \sum_{j = 1}^J (- \hat \pi_{ic} \ln \hat \pi_{ic})}{N \ln C}.
+$$
+
+### Continuous indicators.
+
+> Categorical latent variables also may be defined by continuous indicators. Although such models are often referred to in a general sense as latent class models, the term *latent profile analysis* is more specifically applied to latent class models with continuous indicators ([Lazarsfeld & Henry, 1968](https://www.worldcat.org/title/latent-structure-analysis/oclc/433623)) (p. 269, *emphasis* in the original)
+
+## Structural equation mixture models
+
+Structural equation mixture models allow analysts to fit models with various combinations of categorical and continuous latent variables based on continuous and/or discrete observed variables.
+
+### Estimation, model identification, and fit.
+
+> The most common estimator for latent class models is maximum likelihood (ML) using an expectation maximization (EM) algorithm ([Dempster, Laird, & Rubin, 1977](http://www.eng.auburn.edu/~troppel/courses/7970%202015A%20AdvMobRob%20sp15/literature/paper%20W%20refs/dempster%20EM%201977.pdf); [McLachlan & Krishnan, 1997](https://www.worldcat.org/title/em-algorithm-and-extensions/oclc/35305113); [Muthén & Shedden, 1999](http://www.statmodel.com/download/Muthen_Shedden_1999.pdf)). In the EM steps of the ML process, conditional expectations and the posterior class membership probabilities are computed in the expectation step and parameter estimates are updated. The fit is then maximized through iterations in the maximization step. This process alternates between the two steps until an optimization criterion is reached.... 
+>
+> For identification, the number of classes must be less than the number of indicators unless there are additional constraints (e.g., equal variances for the indicators across classes). Thus, with three indicators, only two classes can be specified without spe- cial restrictions....
+>
+> No chi-square model fit is available for latent class models with continuous indicators. Instead, for assessment of fit, one must rely on likelihood-based fit indices, such as the Akaike Information Criterion (AIC) and the Bayesian Information Criterion (BIC), which are commonly used for evaluation of fit relative to comparison models. The sample size adjusted BIC (aBIC; [Sclove, 1987](https://link.springer.com/article/10.1007/BF02294360)) seems to perform better than other information criteria (e.g., [Nylund et al., 2007](https://www.researchgate.net/profile/Karen_Nylund-Gibson/publication/228701265_Deciding_On_the_Number_of_Classes_In_Latent_Class_Analysis_and_Growth_Mixture_Modeling_A_Monte_Carlo_Simulation_Study/links/54ebb87f0cf2a03051949730.pdf)). (pp. 271--272)
+
+The aBIC follows the formula
+
+$$\text{aBIC} = -2 LL + q \cdot \ln \bigg ( \frac{N + 2}{24} \bigg ),$$
+
+where $LL$ is the log likelihood for the $\text H0$ model and $q$ is the number of free parameters.
+
+### Determining the number of classes.
+
+> The difference in the log likelihoods for two models with a different number of classes is not distributed as chi-square, so an exact test to compare models does not exist. The adjusted BIC is commonly used for this purpose (lower values indicating better fit) and performs fairly well ([Tofighi & Enders, 2008](https://www.researchgate.net/profile/Davood_Tofighi/publication/281378561_Identifying_the_correct_number_of_classes_in_growth_mixture_models/links/58e28714aca272059ab62ed0/Identifying-the-correct-number-of-classes-in-growth-mixture-models.pdf); [Yang 2006](https://reader.elsevier.com/reader/sd/pii/S0167947304003391?token=EE5CBDABB182FA75FE5CC23BA33ED4F81FF7E6E51F2AC9C262612A24604E62C814ADFD97EA12FB4B7F3C2CFFB6F3D1D6)), but a number of simulation studies suggest that more precise methods may be preferable. These methods are designed to compare two models that differ by only one latent class. Among the several proposed alternatives are a bootstrapped likelihood ratio test ([Dziak, Lanza, & Tan, 2014](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4196274/pdf/nihms596137.pdf); [McLachlan & Peel, 2000](https://www.wiley.com/en-us/Finite+Mixture+Models-p-9780471006268); Nylund et al., 2007), the Lo–Mendell–Rubin adjusted likelihood ratio test, and the Vuong–Lo–Mendell–Rubin likelihood ratio test ([Lo, Mendell, & Rubin, 2001](https://www.jstor.org/stable/pdf/2673445.pdf?refreqid=excelsior%3A82355e1314c1f876f1d5fe72a193c113); [Vuong, 1989](https://authors.library.caltech.edu/81424/1/sswp605.pdf)) (p. 273)
+
+### Example 10.1: Latent class and latent profile models.
+
+Let's load the `socex1.1` data.
+
+```{r, warning = F, message = F}
+library(tidyverse)
+
+socex1_names <- 
+  c("w1vst1", "w1vst2", "w1vst3", "w2vst1", "w2vst2", "w2vst3", "w3vst1", "w3vst2", "w3vst3", "w1unw1", "w1unw2", "w1unw3", "w2unw1", "w2unw2", "w2unw3", "w3unw1", "w3unw2", "w3unw3", "w1dboth","w1dsad", "w1dblues", "w1ddep", "w2dboth", "w2dsad","w2dblues", "w2ddep", "w3dboth", "w3dsad", "w3dblues", "w3ddep", "w1marr2", "w1happy", "w1enjoy", "w1satis", "w1joyful", "w1please", "w2happy", "w2enjoy", "w2satis", "w2joyful", "w2please", "w3happy", "w3enjoy", "w3satis", "w3joyful", "w3please", "w1lea", "w2lea", "w3lea")
+
+socex1.1 <- 
+  read_table2("data/socex1.dat",
+              col_names = F) %>% 
+  set_names(socex1_names)
+
+head(socex1.1)
+dim(socex1.1)
+```
+
+Following along with Newsom in the first paragraph of this subsection, here we dichotomize our four variables of interest in a series of `if_else()` statements.
+    
+```{r}
+socex1.1 <-
+  socex1.1 %>% 
+  mutate(w1dbothd = if_else(w1dboth  == 0, 0, 1),
+         w1dsadd  = if_else(w1dsad   == 0, 0, 1),
+         w1dblued = if_else(w1dblues == 0, 0, 1),
+         w1ddepd  = if_else(w1ddep   == 0, 0, 1))
+
+socex1.1 %>% 
+  select(w1dboth:w1ddep, w1dbothd:w1ddepd)
+```
+
+Here's a quick look at their distributions.
+
+```{r, fig.width = 4, fig.height = 3}
+socex1.1 %>% 
+  select(w1dbothd:w1ddepd) %>% 
+  gather() %>% 
+  mutate(value = as.factor(value)) %>% 
+  
+  ggplot(aes(x = value)) +
+  geom_bar() +
+  facet_wrap(~key)
+```
+
+lavaan does [not support mixture models](http://lavaan.ugent.be/development.html), at this time. But as long as you also have a recent version of M*plus*, you can fit them within R via the MplusAutomation package.
+
+```{r, warning = F, message = F}
+library(MplusAutomation)
+```
+
+Newsom provided the M*plus* code for the first model in the `ex10-3a.inp` file. Here's our version using MplusAutomation.
+
+```{r, warning = F, message = F}
+model10.1.a <- 
+  mplusObject(
+  TITLE = "Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;",
+  VARIABLE = "
+  usevariables = w1dbothd w1dsadd w1dblued w1ddepd;
+  categorical  = w1dbothd w1dsadd w1dblued w1ddepd;
+  classes = etac(2);
+  ",
+  ANALYSIS = "
+  type = mixture;
+  ",
+  MODEL = "
+  ! no model statements are needed, one-factor LCA estimated by default;
+  ! here's the optional specification;
+  
+  %overall%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1];
+  
+  ! class 1 mean estimated by default and cannot be specified;
+  %etac#1%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t1-t4);
+  
+  ! class 2 mean set to 0 by default and cannot be modified;
+  %etac#2%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t5-t8);
+  ",
+  OUTPUT = "
+  ! conduct the LMR and the VLMR likelihood ratio tests; 
+  tech11 tech14 cinterval;
+  ",
+  rdata = socex1.1 %>% select(w1dbothd:w1ddepd))
+
+fit_10.1.a <- mplusModeler(model10.1.a, modelout = "model10.1.a.inp", run = 1L)
+```
+
+Here is a summary of the results.
+
+```{r}
+fit_10.1.a$results$summaries %>% 
+  glimpse()
+```
+
+Happily, all our fit values match up with those in the text. In case you were curious, here’s how we might use the formula from above to compute the aBIC by hand.
+
+```{r}
+ll <- fit_10.1.a$results$summaries$LL
+q  <- fit_10.1.a$results$summaries$Parameters
+n  <- fit_10.1.a$results$summaries$Observations
+
+(-2 * ll) + q * log((n + 2) / 24)
+```
+
+Here are the unstandardized parameter estimates.
+
+```{r}
+readModels("model10.1.a.out")$parameters$unstandardized
+```
+
+We can pull their 95% confidence intervals like this.
+
+```{r}
+readModels("model10.1.a.out")$parameters$ci.unstandardized %>% 
+  select(contains("param"), est, contains("2.5"), LatentClass)
+```
+
+You'll note that what the Newsom calls the estimates for the first latent class, our output calls `LatentClass == 2`. This is not a big deal. This ordering is arbitrary.
+
+If we'd like to use Equation 10.1 (i.e., the inverse logit function) to convert our intercept estimates to response probabilities, it can be useful to make a custom `inv_logit()` function.
+
+```{r}
+inv_logit <- function(x) {
+  exp(x) / (1 + exp(x))
+}
+```
+
+Here we feed in the point estimates for the thresholds for our `LatentClass == 2` (i.e., Newsom's first latent class).
+
+```{r}
+inv_logit(c(1.134, 2.016, 1.663, 1.908))
+```
+
+Frustratingly, our values don't quite match up with his. 
+
+But anyways, we don't have to do this by hand. It's already part of the model output. We just have to extract it properly.
+
+```{r}
+readModels("model10.1.a.out")$parameters$probability.scale 
+```
+
+It's beyond me why our values don't match up with those in the text. If you know the answer, [please share](https://github.com/ASKurz/Longidutinal-SEMing/issues) with the rest of the class.
+
+Here's what our output might look like in a plot.
+
+```{r, fig.width = 5, fig.height = 3}
+readModels("model10.1.a.out")$parameters$unstandardized %>% 
+  filter(paramHeader != "Means") %>% 
+  mutate(prob = inv_logit(est),
+         item = str_remove(param, "\\$1")) %>% 
+  
+  ggplot(aes(x = item, y = prob, group = LatentClass, color = LatentClass)) +
+  geom_line() +
+  geom_point(size = 2) +
+  scale_color_viridis_d(end = .7) +
+  ylim(0, 1) +
+  theme(panel.grid = element_blank())
+```
+
+Here's a focused look at the mean for our first class.
+
+```{r}
+readModels("model10.1.a.out")$parameters$unstandardized %>% 
+  filter(paramHeader == "Means")
+```
+
+We can use the `$class_counts$posteriorProb` index to retrieve the posterior probabilities for the proportion of cases within each latent class.
+
+```{r}
+readModels("model10.1.a.out")$class_counts$posteriorProb
+```
+
+```{r}
+readModels("model10.1.a.out")$parameters$probability.scale %>% 
+  filter(category == 2) %>% 
+  mutate(class = rep(1:2, each = 4))
+```
+
+Next in the first full paragraph on page 274, Newsom compared the fit of the 2-class model with a 1-class model with the Lo–Mendell–Rubin adjusted likelihood ratio test (LMR) and the Vuong–Lo–Mendell–Rubin likelihood ratio test (VLMR). With M*plus*, you get those tests for a $k$ versus a $k - 1$ class model by requesting `tech11` in the `OUTPUT`.
+
+```{r}
+fit_10.1.a$results$summaries %>% 
+  select(starts_with("T11")) %>% 
+  glimpse()
+```
+
+The `T11_LMR_` lines give the LMR information and the `T11_VLMR_` lines give the VLMR information. Happily, our values match those in the text.
+
+Newsom said he attempted a three-class model, but the solution didn't converge without constraints. Here's the code.
+
+```{r, warning = F, message = F}
+model10.1.b <- 
+  mplusObject(
+  TITLE = "Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;",
+  VARIABLE = "
+  usevariables = w1dbothd w1dsadd w1dblued w1ddepd;
+  categorical  = w1dbothd w1dsadd w1dblued w1ddepd;
+  classes = etac (3);
+  ",
+  ANALYSIS = "
+  type = mixture;
+  ",
+  MODEL = "
+  ! no model statements are needed, one-factor LCA estimated by default;
+  ! here's the optional specification;
+  
+  %overall%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1];
+  
+  ! class 1;
+  %etac#1%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t1-t4);
+  
+  ! class 2;
+  %etac#2%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t5-t8);
+  
+  ! class 3;
+  %etac#3%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t9-t12);
+  ",
+  OUTPUT = "
+  ! conduct the LMR and the VLMR likelihood ratio tests; 
+  tech11 tech14 cinterval;
+  ",
+  rdata = socex1.1 %>% select(w1dbothd:w1ddepd))
+
+fit_10.1.b <- mplusModeler(model10.1.b, modelout = "model10.1.b.inp", run = 1L)
+```
+
+We can check for warnings like this.
+
+```{r}
+fit_10.1.b$results$warnings
+```
+
+No big issues with the warnings other than truncation without title prose. But the plot thickens when we look at the unstandardized parameter estimates.
+
+```{r}
+readModels("model10.1.b.out")$parameters$unstandardized
+```
+
+Looks like we did have estimation difficulties with two of the thresholds for our second latent class. I would not put my faith on those results.
+
+The next paragraph in this subsection begins:
+
+> A second model was tested to illustrate a latent profile analysis with continuous indicators. For this model, the health and aging data set was used so that the results could be presented for the latent transition model described below, a model that requires more time points than available from the social exchange data set. The latent profile model estimated positive affect classes using five continuous indicators, frequency ratings for the "happy," "enjoy," "satisfied," "joyful," and "pleased" questions. (p. 274)
+
+I'm not sure what happened, but starting here and going further, there appear to be a lot of mistakes in the text. First, those five variables are not in the "health and aging" data set (i.e., `health.dat`). Rather, those variables are indeed in the social exchange data set (i.e., `socex1.dat`), the one we just used. Here they are:
+
+```{r}
+socex1.1 %>% 
+  select(w1happy:w1please)
+```
+
+We can further confirm that based on the code in Newsom's `ex10-1b.inp` file, which shows how to use those five variables in a 3-class latent profile model. Note that since we fit the 3-class model, above, our naming convention is now a little out of step with Newsom's. For us, this will be `model10.1.c`.
+  
+```{r, warning = F, message = F}
+model10.1.c <- 
+  mplusObject(
+  TITLE = "Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;",
+  VARIABLE = "
+  usevariables = w1happy w1enjoy w1satis w1joyful w1please;
+  classes = etac (3);
+  ",
+  ANALYSIS = "
+  type = mixture;
+  ",
+  MODEL = "
+  ! no model statements are needed to obtain basic latent profile model;
+  ",
+  OUTPUT = "
+  ! conduct the LMR and the VLMR likelihood ratio tests; 
+  tech11 cinterval;
+  ",
+  rdata = socex1.1 %>% select(w1happy:w1please))
+
+fit_10.1.c <- mplusModeler(model10.1.c, modelout = "model10.1.c.inp", run = 1L)
+```
+
+Here is the results summary.
+
+```{r}
+fit_10.1.c$results$summaries %>% 
+  # select(starts_with("T11")) %>% 
+  glimpse()
+```
+
+As indicated in the text, we don't get a model $\chi^2$. But we do get information criteria. Frustratingly, our aBIC does not match up with the one Newsom reported. If you look at the `T11_` columns, you'll see our LMR and VLMR values also conflict with Newsom's--though at least the basic interpretations of the $p$-values do. Both our findings and Newsom's suggest the 2-class model fits significantly worse than the 3-class.
+
+Here's a focused look at the mean estimates for our first and second classes.
+
+```{r}
+readModels("model10.1.c.out")$parameters$unstandardized %>% 
+  filter(str_detect(param, "ETAC"))
+```
+
+Well finally, at least these match up with the results in the text! Here are the estimated proportions for each class.
+
+```{r}
+readModels("model10.1.c.out")$class_counts$posteriorProb
+```
+
+We can pull the estimated within-class means from Table 10.1 like so.
+
+```{r}
+readModels("model10.1.c.out")$parameters$unstandardized %>% 
+  filter(paramHeader == "Means" & !str_detect(param, "ETAC")) %>% 
+  mutate(class = str_c("class ", LatentClass),
+         pa = factor(param,
+                     levels = c("W1HAPPY", "W1ENJOY", "W1SATIS", "W1JOYFUL", "W1PLEASE"),
+                     labels = c("happy", "enjoy", "satisfied", "joyful", "pleased"))) %>% 
+  select(pa, est, class) %>% 
+  spread(key = class, value = est)
+```
+
+Here's a quick way to get the observed means.
+
+```{r}
+socex1.1 %>% 
+  select(w1happy:w1please) %>% 
+  summarise_all(~mean(.) %>% round(digits = 3)) %>% 
+  gather(pa, observed_mean)
+```
+
+## Latent transition analysis
+
+> The purpose of latent transition analysis is to study longitudinal changes in an individual's latent class membership over time. Latent class models provide information about the probability of transition from one qualitative state to another.... The aim is to discover transitions in membership from one unobserved group to another over time, contrasting with the aim of many other analyses to investigate increases or decreases in the frequency or intensity of a continuous construct over time. The latent transition model is an autoregressive model that uses membership in a latent class at one time point to predict the probability of membership in a latent class at a subsequent time point. (p. 275).
+
+### Basic concepts.
+
+With a simple example of a 2-class 2-time point model with binary indicators, the conditional probability a respondent will transition from one class to another, $\hat \pi_{t | t - 1}$, is
+
+$$\hat \pi_{2 | 1} = P (\eta_2^C = 1 | \eta_1^C = 0) = \frac{e^{\alpha_{2 | 1}}}{ 1 + e^{\alpha_{2 | 1}}},$$
+
+where $\eta_2^C$ and $\eta_1^C$ depict the latent classes at times $t$ and $t - 1$. For more than two classes, we generalize this to a multinomial logistic model.
+
+### Example 10.2: Latent transition model for two time points .
+
+Here we extend how we began our analyses in Example 10.1. We have already dichotomized the four depression variables for the first wave. Here we'll follow the same steps to dichotomize them at the second wave.
+    
+```{r}
+socex1.1 <-
+  socex1.1 %>% 
+  mutate(w2dbothd = if_else(w2dboth  == 0, 0, 1),
+         w2dsadd  = if_else(w2dsad   == 0, 0, 1),
+         w2dblued = if_else(w2dblues == 0, 0, 1),
+         w2ddepd  = if_else(w2ddep   == 0, 0, 1))
+
+socex1.1 %>% 
+  select(w2dboth:w2ddep, w2dbothd:w2ddepd)
+```
+
+Newsome provided code in his `ex10-2a.inp` file.
+
+```{r, warning = F, message = F}
+model10.2.a <- 
+  mplusObject(
+  TITLE = "
+  Newsom Longitudinal SEM Chapter 10, Example 10.2,; 
+  Latent Transition and Growth Mixture Models;
+  ",
+  VARIABLE = "
+  usevariables = w1dbothd w1dsadd w1dblued w1ddepd w2dbothd w2dsadd w2dblued w2ddepd;
+  categorical  = w1dbothd w1dsadd w1dblued w1ddepd w2dbothd w2dsadd w2dblued w2ddepd;
+  classes = etac1 (2) etac2 (2);
+  ",
+  ANALYSIS = "
+  type = mixture;
+  ",
+  MODEL = "
+  ! this time we cannot rely on defaults;
+  %overall%
+  etac2 on etac1;
+  [etac1#1];
+  ! note: mean of last class cannot be referenced;
+  
+  model etac1:    
+  %etac1#1%  
+  [w1dbothd$1] (1);
+  [w1dsadd$1]  (2);
+  [w1dblued$1] (3);
+  [w1ddepd$1]  (4);
+  
+  ! class 2 mean set to 0 by default and cannot be modified;
+  %etac1#2%  
+  [w1dbothd$1] (5);
+  [w1dsadd$1]  (6);
+  [w1dblued$1] (7);
+  [w1ddepd$1]  (8);
+  
+  ! note how we're holding the thresholds constant over time
+  model etac2:
+  ! class 2 mean estimated by default and cannot be specified;
+  %etac2#1% 
+  [w2dbothd$1] (1);
+  [w2dsadd$1]  (2);
+  [w2dblued$1] (3); 
+  [w2ddepd$1]  (4);
+  
+  ! class 2 mean set to 0 by default and cannot be modified;
+  %etac2#2%  
+  [w2dbothd$1] (5);
+  [w2dsadd$1]  (6);
+  [w2dblued$1] (7);
+  [w2ddepd$1]  (8);
+  ",
+  OUTPUT = "
+  ! conduct the LMR and the VLMR likelihood ratio tests; 
+  tech11 tech14 cinterval;
+  ",
+  rdata = socex1.1 %>% select(w1dbothd:w1ddepd, w2dbothd:w2ddepd))
+
+fit_10.2.a <- mplusModeler(model10.2.a, modelout = "model10.2.a.inp", run = 1L)
+```
+
+Here is the results summary.
+
+```{r}
+fit_10.2.a$results$summaries %>% 
+  glimpse()
+```
+
+The results for our Pearson's and LRT $\chi^2$ tests cohere with those in the text. Both suggest a bit of model misfit. 
+
+It can be somewhat challenging to make sense of the parameter summaries. Here's what they look like in a facetet plot.
+
+```{r,fig.width = 6, fig.height = 3}
+readModels("model10.2.a.out")$parameters$unstandardized %>% 
+  filter(paramHeader == "Thresholds") %>% 
+  separate(LatentClass, into = c("class at t = 1", "class at t = 2")) %>% 
+  mutate(`class at t = 1` = str_c("class at t = 1: ", `class at t = 1`),
+         `class at t = 2` = str_c("class at t = 2: ", `class at t = 2`),
+         threshold = str_remove(param, "D\\$1")) %>% 
+  
+  ggplot(aes(x = est, y = threshold)) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_point() +
+  theme(panel.grid  = element_blank(),
+        axis.text.y = element_text(hjust = 0)) +
+  facet_grid(`class at t = 1` ~ `class at t = 2`)
+```
+
+Remember the estimates are on the log-odds scale. Negative values convert to probabilities less than .5 and positive estimates convert to probabilities greater than .5.
+
+Here's how to extract the transition probabilities, as presented in Table 10.2.
+
+```{r}
+fit_10.2.a$results$class_counts$transitionProbs
+```
+
+In case you were curious, here's how to put the output in a more Table 10.2-like format.
+
+```{r}
+fit_10.2.a$results$class_counts$transitionProbs %>% 
+  mutate(`time 1` = ifelse(from == "ETAC1.1", "class 1", "class 2"),
+         `time 2` = ifelse(to   == "ETAC2.1", "class 1", "class 2")) %>% 
+  select(probability:`time 2`) %>% 
+  spread(key = `time 2`, value = probability)
+```
+
+Here are the non-threshold parameter estimates for the model.
+
+```{r}
+readModels("model10.2.a.out")$parameters$unstandardized %>% 
+  filter(paramHeader != "Thresholds")
+```
+
+From the top to the bottom, those are the 
+
+* autoregressive coefficient,
+* $\alpha_{1 | 1}$, and
+* $\alpha_{2 | 1}$.
+
+Here's the interpretation of $\alpha_{2 | 1}$.
+
+```{r}
+readModels("model10.2.a.out")$parameters$unstandardized %>% 
+  filter(param == "ETAC2#1") %>% 
+  select(est) %>% 
+  mutate(`probability from 2 to 1` = inv_logit(est) %>% round(digits = 3))
+```
+
+Here's a quick way to get the odds ratio.
+
+```{r}
+(fit_10.2.a$results$class_counts$transitionProbs[1, 3] / 
+   fit_10.2.a$results$class_counts$transitionProbs[3, 3]) / 
+  (fit_10.2.a$results$class_counts$transitionProbs[2, 3] / 
+     fit_10.2.a$results$class_counts$transitionProbs[4, 3])
+```
+
+It suggests "an individual was nearly seven times more likely to be in the depressed group at Time 2 if they were in the depressed group at Time 1" (p. 277).
+
+### The latent Markov chain: A quasi-simplex model for latent classes.
+
+> Once the basic concepts of the latent transition model are understood as an autoregressive model of categorical variables, the model can be related to the autoregressive models with additional time points. With a set of continuous observed variables that have been repeatedly measured, stability or change can be modeled with the simplex or quasi-simplex model (Chapter 5). Markov chain model is a special name for a simplex model with binary measured variables in which the categories are known. If there are two latent classes defined by a single observed binary indicator at each time point, the model is called a *latent Markov model* or "hidden" Markov model ([Baum, Petrie, Soules, & Weiss, 1970](https://www.biostat.wisc.edu/~kbroman/teaching/statgen/2004/refs/baum.pdf); [Langeheine, 1994](https://psycnet.apa.org/record/1996-97111-015); [Wiggins, 1973](https://psycnet.apa.org/record/1974-10981-000)). Recall that the quasi-simplex model is designed to take meas- urement error into account in the estimation of the autoregressive effects even though only a single indicator is used to define a latent continuous variable at each occasion. In a parallel fashion, the latent Markov model can be conceptualized as a quasi-simplex analysis with latent classes defined by only a single indicator at each time point in which the observed variable is considered a fallible indicator of the true underlying class membership ([Kaplan, 2009](https://us.sagepub.com/en-us/nam/structural-equation-modeling/book227519)) (pp. 278--179, *emphasis* in the original)
+
+### Example 10.3: Latent Markov chain model.
+
+Here we load the `health` data.
+
+```{r, warning = F, message = F}
+health1_names <- c("age", "srh1", "srh2", "srh3", "srh4", "srh5", "srh6", "bmi1",
+"bmi2", "bmi3", "bmi4", "bmi5", "bmi6", "cesdna1", "cesdpa1", "cesdso1",
+"cesdna2", "cesdpa2", "cesdso2", "cesdna3", "cesdpa3", "cesdso3",
+"cesdna4", "cesdpa4", "cesdso4", "cesdna5", "cesdpa5", "cesdso5",
+"cesdna6", "cesdpa6", "cesdso6", "diab1", "diab2", "diab3", "diab4", "diab5", "diab6")
+
+health1 <- 
+  read_table2("data/health.dat",
+              col_names = F) %>% 
+  set_names(health1_names)
+
+glimpse(health1)
+```
+
+Newsom provided the M*plus* code for the first model in the `ex10-3a.inp` file. Here's our version using MplusAutomation.
+
+```{r, warning = F, message = F}
+model10.3.a <- 
+  mplusObject(
+  TITLE = "Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;",
+  VARIABLE = "
+  usevariables = diab1 diab2 diab3 diab4 diab5 diab6;
+  categorical  = diab1 diab2 diab3 diab4 diab5 diab6;
+  classes = etac1(2) etac2(2) etac3(2) etac4(2) etac5(2) etac6(2);
+  ",
+  ANALYSIS = "
+  type = mixture;
+  ",
+  MODEL = "
+  %OVERALL%
+	[etac2#1-etac6#1];
+	etac2 on etac1;
+  etac3 on etac2; 
+	etac4 on etac3;
+  etac5 on etac4;
+  etac6 on etac5;
+	
+	MODEL etac1:
+	%etac1#1%
+	[diab1$1] (3);
+	%etac1#2%
+	[diab1$1] (4);
+	
+	MODEL etac2:
+	%etac2#1%
+	[diab2$1] (3) ;
+	%etac2#2%
+	[diab2$1] (4);
+	
+	MODEL etac3:
+	%etac3#1%
+	[diab3$1] (3);
+	%etac3#2%
+	[diab3$1] (4);
+	
+	MODEL etac4:
+	%etac4#1%
+	[diab4$1] (3);
+	%etac4#2%
+	[diab4$1] (4);
+	
+	MODEL etac5:
+	%etac5#1%
+	[diab5$1] (3);
+	%etac5#2%
+	[diab5$1] (4);
+	
+	MODEL etac6:
+	%etac6#1%
+	[diab6$1] (3);
+	%etac6#2%
+	[diab6$1] (4);
+  ",
+  OUTPUT = "cinterval! TECH8 on output line requests optimization history;",
+  rdata = health1 %>% select(diab1:diab6))
+
+fit_10.3.a <- mplusModeler(model10.3.a, modelout = "model10.3.a.inp", run = 1L)
+```
+
+Let's take a focused look at the model $\chi^2$ results and the aBIC.
+
+```{r}
+fit_10.3.a$results$summaries %>% 
+  select(contains("ChiSq"), aBIC) %>% 
+  glimpse()
+```
+
+They match those reported in the text. Here are the latent class means.
+
+```{r}
+fit_10.3.a$results$parameters$unstandardized %>% 
+  filter(paramHeader == "Means")
+```
+
+We can use the our handmade `inv_logit()` function to convert them to probabilities.
+
+```{r}
+fit_10.3.a$results$parameters$unstandardized %>% 
+  filter(paramHeader == "Means") %>% 
+  mutate(prob = inv_logit(est) %>% round(digits = 3))
+```
+
+Here are the autoregressive parameters and their odds ratios.
+
+```{r}
+fit_10.3.a$results$parameters$unstandardized %>% 
+  filter(str_detect(paramHeader, ".ON")) %>% 
+  mutate(odds_ratio = exp(est) %>% round(digits = 3))
+```
+
+Newsom gave the code for the next model, a simplified one with equality constraints on the conditional means ($\alpha_{2|1}$ through $\alpha_{6|5}$) and autoregressive parameters ($\beta_{21}$ through $\beta_{65}$), in the `ex10-3b.inp` file.
+
+```{r, warning = F, message = F}
+model10.3.b <- 
+  mplusObject(
+  TITLE = "Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;",
+  VARIABLE = "
+  usevariables = diab1 diab2 diab3 diab4 diab5 diab6;
+  categorical  = diab1 diab2 diab3 diab4 diab5 diab6;
+  classes = etac1(2) etac2(2) etac3(2) etac4(2) etac5(2) etac6(2);
+  ",
+  ANALYSIS = "
+  type = mixture;
+  ",
+  MODEL = "
+  !stationarity model;
+  %OVERALL%
+	[etac2#1-etac6#1] (1);
+	etac2 on etac1 (2);
+  etac3 on etac2 (2); 
+	etac4 on etac3 (2);
+  etac5 on etac4 (2);
+  etac6 on etac5 (2);
+	
+	MODEL etac1:
+	%etac1#1%
+	[diab1$1] (3);
+	%etac1#2%
+	[diab1$1] (4);
+	
+	MODEL etac2:
+	%etac2#1%
+	[diab2$1] (3) ;
+	%etac2#2%
+	[diab2$1] (4);
+	
+	MODEL etac3:
+	%etac3#1%
+	[diab3$1] (3);
+	%etac3#2%
+	[diab3$1] (4);
+	
+	MODEL etac4:
+	%etac4#1%
+	[diab4$1] (3);
+	%etac4#2%
+	[diab4$1] (4);
+	
+	MODEL etac5:
+	%etac5#1%
+	[diab5$1] (3);
+	%etac5#2%
+	[diab5$1] (4);
+	
+	MODEL etac6:
+	%etac6#1%
+	[diab6$1] (3);
+	%etac6#2%
+	[diab6$1] (4);
+  ",
+  OUTPUT = "cinterval! TECH8 on output line requests optimization history;",
+  rdata = health1 %>% select(diab1:diab6))
+
+fit_10.3.b <- mplusModeler(model10.3.b, modelout = "model10.3.b.inp", run = 1L)
+```
+
+As in the text, the fit for this constrained model is worse.
+
+```{r}
+fit_10.3.b$results$summaries %>% 
+  select(contains("ChiSq"), aBIC) %>% 
+  glimpse()
+```
+
+We can compute the difference in the models' two likelihood ratio values and their degrees of freedom like this.
+
+```{r}
+fit_10.3.b$results$summaries[["ChiSqCategoricalLRT_Value"]] - fit_10.3.a$results$summaries[["ChiSqCategoricalLRT_Value"]]
+
+fit_10.3.b$results$summaries[["ChiSqCategoricalLRT_DF"]] - fit_10.3.a$results$summaries[["ChiSqCategoricalLRT_DF"]]
+```
+
+The code for the Markov model with the observed variables, the perfect simplex model, is simpler (see the `ex10-3c.inp` file).
+
+```{r, warning = F, message = F}
+model10.3.c <- 
+  mplusObject(
+  TITLE = "Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;",
+  VARIABLE = "
+  usevariables = diab1 diab2 diab3 diab4 diab5 diab6;
+  categorical  =       diab2 diab3 diab4 diab5 diab6;
+  ",
+  ANALYSIS = "
+  type = general; 
+  estimator = ml;
+  ",
+  MODEL = "
+  !observed variable (manifest) model;
+	[diab1@0];
+	diab2 on diab1;
+  diab3 on diab2; 
+	diab4 on diab3;
+  diab5 on diab4;
+  diab6 on diab5;
+  ",
+  OUTPUT = "cinterval",
+  rdata = health1 %>% select(diab1:diab6))
+
+fit_10.3.c <- mplusModeler(model10.3.c, modelout = "model10.3.c.inp", run = 1L)
+```
+
+Here are the estimates for the conditional means (i.e., the thresholds) and the conditional probabilities.
+
+```{r}
+fit_10.3.c$results$parameters$unstandardized %>% 
+  filter(paramHeader == "Thresholds") %>% 
+  mutate(conditional_prob = 1 - inv_logit(est) %>% round(digits = 3))
+```
+
+Now behold the autoregressive parameters and their odds ratios.
+
+```{r}
+fit_10.3.c$results$parameters$unstandardized %>% 
+  filter(str_detect(paramHeader, ".ON")) %>% 
+  mutate(odds_ratio = exp(est) %>% round(digits = 3))
+```
+
+"Lower stability is generally expected with the assumption of no measurement error implied by the use of the observed variables used in this model instead of latent class variables used in the prior model" (p. 279).
+
+### Latent transition models with multiple indicators.
+
+> The multiple indicator latent class and Markov models can be integrated to form an autoregressive simplex model with multiple indicator latent class variables at each time point....
+>
+> The latent transition modeling framework is sometimes more broadly termed *latent stage sequential modeling* ([Collins & Wugalter, 1992](https://www.tandfonline.com/doi/abs/10.1207/s15327906mbr2701_8); [Lanza, 2003](https://www.cpc.unc.edu/projects/addhealth/publications/4274)). The concept of the stage sequence is that an individual has a specific class membership pattern. For example, in a set of six binary latent classes, one individual’s class membership might be 1, 2, 2, 1, 1, 1. This individual moves from Class 1 to Class 2 at the second occasion but then moves back to Class 1 at the fourth occasion. (pp. 179--280)
+
+### Example 10.4: Latent transition models with multiple indicators.
+
+We can get the M*plus* code for the next model from Newsom's `ex-10-4a.inp` file.
+
+```{r, warning = F, message = F}
+model10.4.a <- 
+  mplusObject(
+  TITLE = "Newsom Longitudinal SEM Chapter 10, Example 10.4,
+    Latent Transition and Growth Mixture Models;",
+  VARIABLE = "
+    usevariables= 
+    cesdna1 cesdpa1 cesdso1
+    cesdna2 cesdpa2 cesdso2
+    cesdna3 cesdpa3 cesdso3
+    cesdna4 cesdpa4 cesdso4
+    cesdna5 cesdpa5 cesdso5
+    cesdna6 cesdpa6 cesdso6;
+    
+    classes = etac1(2) etac2(2) etac3(2) etac4(2) etac5(2) etac6(2);   
+  ",
+  ANALYSIS = "
+  type = mixture;
+  ",
+  MODEL = "
+  %OVERALL%
+	[etac2#1-etac6#1];
+  etac2 on etac1;
+  etac3 on etac2; 
+	etac4 on etac3;
+  etac5 on etac4;
+  etac6 on etac5;
+    
+  MODEL etac1:
+	%etac1#1%
+	[cesdna1] (3);
+  [cesdpa1] (4);
+  [cesdso1] (5);
+	%etac1#2%
+	[cesdna1] (6);
+  [cesdpa1] (7);
+  [cesdso1] (8);
+  
+  MODEL etac2:
+	%etac2#1%
+	[cesdna2] (3);
+  [cesdpa2] (4);
+  [cesdso2] (5);
+	%etac2#2%
+	[cesdna2] (6);
+  [cesdpa2] (7);
+  [cesdso2] (8);
+  
+  MODEL etac3:
+	%etac3#1%
+	[cesdna3] (3);
+  [cesdpa3] (4);
+  [cesdso3] (5);
+	%etac3#2%
+	[cesdna3] (6);
+  [cesdpa3] (7);
+  [cesdso3] (8);
+  
+  MODEL etac4:
+	%etac4#1%
+	[cesdna4] (3);
+  [cesdpa4] (4);
+  [cesdso4] (5);
+	%etac4#2%
+	[cesdna4] (6);
+  [cesdpa4] (7);
+  [cesdso4] (8);
+  
+  MODEL etac5:
+	%etac5#1%
+	[cesdna5] (3);
+  [cesdpa5] (4);
+  [cesdso5] (5);
+	%etac5#2%
+	[cesdna5] (6);
+  [cesdpa5] (7);
+  [cesdso5] (8);
+  
+  MODEL etac6:
+	%etac6#1%
+	[cesdna6] (3);
+  [cesdpa6] (4);
+  [cesdso6] (5);
+	%etac6#2%
+	[cesdna6] (6);
+  [cesdpa6] (7);
+  [cesdso6] (8);
+  ",
+  OUTPUT = "cinterval",
+  rdata = health1 %>% select(starts_with("cesd")))
+
+fit_10.4.a <- mplusModeler(model10.4.a, modelout = "model10.4.a.inp", run = 1L)
+```
+
+We don't have a $\chi^2$ for this model, but here's the aBIC and friends.
+
+```{r}
+fit_10.4.a$results$summaries %>% 
+  glimpse()
+```
+
+Here are the conditional latent means and the corresponding transition probabilities.
+
+```{r}
+fit_10.4.a$results$parameters$unstandardized %>% 
+  filter(str_detect(param, "ETA") & 
+           paramHeader == "Means") %>% 
+  filter(param != "ETAC1#1") %>% 
+  mutate(transition_prob = inv_logit(est) %>% round(digits = 3))
+```
+
+You can get a more complete account of the various transition probabilities like so.
+
+```{r}
+fit_10.4.a$results$class_counts$transitionProbs
+```
+
+Here are the estimates for the autoregressive coefficients and their corresponding log odds.
+
+```{r}
+fit_10.4.a$results$parameters$unstandardized %>% 
+  filter(str_detect(paramHeader, "ON")) %>% 
+  mutate(log_odds = exp(est) %>% round(digits = 3))
+```
+
+
+next is `ex10-4b.inp` in the middle of page 281
+
+
+### Covariates.
+
+## Growth Mixture Modeling
+
+[starts page 283]
+
+### Growth curve model review.
+
+> *Growth mixture models* involve the combination of the latent growth curve model and latent class models, grouping individual trajectories by their patterns of change. Grouping of trajectories can be handled with an integrated approach using SEM software ([Muthén & Shedden, 1999](https://onlinelibrary.wiley.com/doi/pdf/10.1111/j.0006-341X.1999.00463.x?casa_token=uc6XACrdm-8AAAAA:78xA4L2groJsrPEDXVilalljGKQ6-m2PnXCsWI1ummR8WLho9hsJx_hvuBtDuvw7v9PAcQUBPUaf4DQ); [Muthén, 2001](http://statmodel.com/bmuthen/articles/Article_082.pdf)) or a semiparametric process with other software ([Nagin, 1999](https://pdfs.semanticscholar.org/9c42/040f9ce675175ab89d777aa0b263a4f6d0b7.pdf); [Rindskopf, 1990](https://www.researchgate.net/publication/247715659_Testing_developmental_models_using_latent_class_analysis)). An important difference is that the semiparametric approach assumes no individual variance of parameters within class (see [Shiyko, Ram, & Grimm, 2012](https://www.researchgate.net/publication/313597224_An_overview_of_growth_mixture_modeling_A_simple_nonlinear_application_in_OpenMx) for a more detailed contrast of the approaches). Moreover, the SEM mixture modeling framework has a number of additional potential advantages, such as incorporation into larger structural models like second-order growth curve models. (p. 283, *emphasis* in the original)
+
+### Growth curve model review.
+
+The basic equation for the latent growth curve model follows the form
+
+$$
+\begin{align*}
+y_{ti} & = \eta_{0i} + \lambda_{t1} \eta_{1i} + \epsilon_{ti}, \text{ where} \\
+\eta_{0i} & = \alpha_0 + \zeta_{0i}, \\
+\eta_{1i} & = \alpha_1 + \zeta_{1i}, \text{ and} \\
+\begin{bmatrix}
+\zeta_{0i} \\ \zeta_{1i}
+\end{bmatrix} & \sim \text{Normal} 
+\begin{pmatrix}
+\begin{bmatrix}
+0 \\ 0
+\end{bmatrix},
+
+\begin{bmatrix}
+\psi_{00} & \psi_{01} \\ \psi_{01} & \psi_{11}
+\end{bmatrix}
+
+\end{pmatrix},
+\end{align*}
+$$
+
+where the latent variables $\eta_{0i}$ and $\eta_{1i}$ are the varying intercepts and slopes, respectively, the two $]\alpha$ parameters are their means, and the $\zeta$ parameters are their residual variances which are themselves distributed as multivariate normal with zero means and variance/covariance matrix. 
+
+### Specification of the growth mixture model.
+
+The general model follows the form
+
+$$
+y_{tic} = \sum_{c = 1}^C \hat \pi_{ic} (\eta_{0ic} + \lambda_{tc} \eta_{1ic} + \epsilon_{tic})
+$$
+
+which indicates "an observed score at a particular time point for an individual within a class, $y_{tic}$, is equal to the sum across classes of the growth curve (in parentheses) weighted by that case's estimated probability of membership in the class, $\hat \pi_{ic}$" (p. 284).
+
+### Example 10.5: Growth mixture model.
+
+We can get the M*plus* code for the next model from Newsom's `ex-10-5.inp` file. We continue to use the `health` data.
+
+```{r, warning = F, message = F}
+model10.5 <- 
+  mplusObject(
+  TITLE = "Newsom Longitudinal SEM Chapter 10, Example 10.5,
+    Latent Transition and Growth Mixture Models;",
+  VARIABLE = "
+    usevariables = 
+    bmi1 bmi2 bmi3 bmi4 bmi5 bmi6;
+    classes = etac (2); 
+  ",
+  ANALYSIS = "
+  type = mixture;
+  starts = 200 20;  ! this model required additional random starts
+  ",
+  MODEL = "
+  %overall%
+  i by bmi1@1 bmi2@1 bmi3@1 bmi4@1 bmi5@1 bmi6@1;
+  s by bmi1@0 bmi2@1 bmi3@2 bmi4@3 bmi5@4 bmi6@5;
+  i (1); 
+  s (2);
+  i with s;
+  [i s];
+  [bmi1-bmi6@0];
+  bmi1 bmi2 bmi3 bmi4 bmi5 bmi6 (5-10);
+  
+  ! bmi1-bmi5 pwith bmi2-bmi6 (10-14);  ! optional AR 1 residual correlations
+  ! note: equality constraints on means in this model had convergence issues;
+  
+  %etac#1%
+  ! [i] (3);  !comment out except for means test
+  ! [s] (4);  !comment out except for means test
+
+  %etac#2%  ! statements needed to free means in second class
+  [i];  ! add (3) for equal intercept mean test
+  [s];  ! add (4) for equal slope mean test
+  
+  ! Equivalent model using Mplus shortcuts;
+  ! %overall%
+  ! i s | bmi1@0 bmi2@1 bmi3@2 bmi4@3 bmi5@4 bmi6@5;
+  ",
+  OUTPUT = "tech11 tech14 cinterval",
+  rdata = health1 %>% select(bmi1, bmi2, bmi3, bmi4, bmi5, bmi6))
+
+fit_10.5 <- mplusModeler(model10.5, modelout = "model10.5.inp", run = 1L)
+```
+
+As with the last example, we don't have a $\chi^2$ for this model. Here are the aBIC and friends.
+
+```{r}
+fit_10.5$results$summaries %>% 
+  glimpse()
+```
+
+"the likelihood ratio tests comparing a model with only one latent class were not significant, ... , suggesting that no unobserved classes of trajectories existed for this model. It is unlikely that a model with additional classes would fit better" (p. 285).
+
+Here are the intercepts and slopes for the two classes.
+
+```{r}
+fit_10.5$results$parameters$unstandardized %>% 
+  filter(paramHeader == "Means") %>% 
+  filter(param != "ETAC#1")
+```
+
+They're quite similar, particularly the intercepts. Here they are in coefficient plots.
+
+```{r, fig.width = 6, fig.height = 1.25}
+fit_10.5$results$parameters$ci.unstandardized %>% 
+  filter(paramHeader == "Means") %>% 
+  filter(param != "ETAC#1") %>% 
+  
+  ggplot(aes(x = LatentClass, y = est, ymin = low2.5, ymax = up2.5)) +
+  geom_pointrange() +
+  labs(x = "latent class",
+       y = NULL) +
+  coord_flip() +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~param, scales = "free")
+```
+
+For kicks and giggles, here are the class counts.
+
+```{r}
+fit_10.5$results$class_counts$posteriorProb
+```
+
+### Comments.
+
+> Once the number of classes has been determined, interpretation must be given to the latent classes in the final model, and plotting within-class trajectories is essential for the optimal interpretation. A continuum of growth rather than discrete classes may equivalently account for the data, and researchers should use theory to guide decisions about which is most appropriate. Nonnormal distributions of growth parameters (i.e., violations of within-class normality assumptions) may also be responsible for incorrect conclusions about the number of latent classes, including whether or not latent classes exist ([Bauer & Curran, 2003](http://dbauer.web.unc.edu/files/2014/08/bauer-curran-PM-2003.pdf)). (p. 286)
+
+## Reference {-}
+
+[Newsom, J. T. (2015). *Longitudinal structural equation modelling: A comprehensive introduction*. London: Routledge.](http://www.longitudinalsem.com)
+
+## Session info {-}
+
+```{r}
+sessionInfo()
+```
+

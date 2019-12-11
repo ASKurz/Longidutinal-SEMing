@@ -1,0 +1,42 @@
+TITLE:
+Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;
+DATA:
+FILE = "model10.1.a_44eb83e54906e3b5856364155a0534dd.dat";
+ 
+VARIABLE:
+NAMES = w1dbothd w1dsadd w1dblued w1ddepd; 
+ MISSING=.;
+ 
+  usevariables = w1dbothd w1dsadd w1dblued w1ddepd;
+  categorical  = w1dbothd w1dsadd w1dblued w1ddepd;
+  classes = etac (3);
+  
+ANALYSIS:
+
+  type = mixture;
+  
+MODEL:
+
+  ! no model statements are needed, one-factor LCA estimated by default;
+  ! here's the optional specification;
+  
+  %overall%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1];
+  
+  ! class 1;
+  %etac#1%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t1-t4);
+  
+  ! class 2;
+  %etac#2%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t5-t8);
+  
+  ! class 3;
+  %etac#3%
+  [w1dbothd$1 w1dsadd$1 w1dblued$1 w1ddepd$1] (t9-t12);
+  
+OUTPUT:
+
+  ! conduct the LMR and the VLMR likelihood ratio tests; 
+  tech11 tech14 cinterval;
+  

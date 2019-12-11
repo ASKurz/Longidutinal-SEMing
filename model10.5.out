@@ -1,0 +1,550 @@
+Mplus VERSION 7.4 (Mac)
+MUTHEN & MUTHEN
+12/11/2019   4:28 PM
+
+INPUT INSTRUCTIONS
+
+  TITLE:
+  Newsom Longitudinal SEM Chapter 10, Example 10.5,
+      Latent Transition and Growth Mixture Models;
+  DATA:
+  FILE = "model10.5_0b1df2aa760fe847b55c59562ce06d0d.dat";
+
+  VARIABLE:
+  NAMES = bmi1 bmi2 bmi3 bmi4 bmi5 bmi6;
+   MISSING=.;
+
+      usevariables =
+      bmi1 bmi2 bmi3 bmi4 bmi5 bmi6;
+      classes = etac (2);
+
+  ANALYSIS:
+
+    type = mixture;
+    starts = 200 20;  ! this model required additional random starts
+
+  MODEL:
+
+    %overall%
+    i by bmi1@1 bmi2@1 bmi3@1 bmi4@1 bmi5@1 bmi6@1;
+    s by bmi1@0 bmi2@1 bmi3@2 bmi4@3 bmi5@4 bmi6@5;
+    i (1);
+    s (2);
+    i with s;
+    [i s];
+    [bmi1-bmi6@0];
+    bmi1 bmi2 bmi3 bmi4 bmi5 bmi6 (5-10);
+
+    ! bmi1-bmi5 pwith bmi2-bmi6 (10-14);  ! optional AR 1 residual correlations
+    ! note: equality constraints on means in this model had convergence issues;
+
+    %etac#1%
+    ! [i] (3);  !comment out except for means test
+    ! [s] (4);  !comment out except for means test
+
+    %etac#2%  ! statements needed to free means in second class
+    [i];  ! add (3) for equal intercept mean test
+    [s];  ! add (4) for equal slope mean test
+
+    ! Equivalent model using Mplus shortcuts;
+    ! %overall%
+    ! i s | bmi1@0 bmi2@1 bmi3@2 bmi4@3 bmi5@4 bmi6@5;
+
+  OUTPUT:
+  tech11 tech14 cinterval
+
+
+
+INPUT READING TERMINATED NORMALLY
+
+
+
+
+Newsom Longitudinal SEM Chapter 10, Example 10.5,
+Latent Transition and Growth Mixture Models;
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                        5335
+
+Number of dependent variables                                    6
+Number of independent variables                                  0
+Number of continuous latent variables                            2
+Number of categorical latent variables                           1
+
+Observed dependent variables
+
+  Continuous
+   BMI1        BMI2        BMI3        BMI4        BMI5        BMI6
+
+Continuous latent variables
+   I           S
+
+Categorical latent variables
+   ETAC
+
+
+Estimator                                                      MLR
+Information matrix                                        OBSERVED
+Optimization Specifications for the Quasi-Newton Algorithm for
+Continuous Outcomes
+  Maximum number of iterations                                 100
+  Convergence criterion                                  0.100D-05
+Optimization Specifications for the EM Algorithm
+  Maximum number of iterations                                 500
+  Convergence criteria
+    Loglikelihood change                                 0.100D-06
+    Relative loglikelihood change                        0.100D-06
+    Derivative                                           0.100D-05
+Optimization Specifications for the M step of the EM Algorithm for
+Categorical Latent variables
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-05
+  Basis for M step termination                           ITERATION
+Optimization Specifications for the M step of the EM Algorithm for
+Censored, Binary or Ordered Categorical (Ordinal), Unordered
+Categorical (Nominal) and Count Outcomes
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-05
+  Basis for M step termination                           ITERATION
+  Maximum value for logit thresholds                            15
+  Minimum value for logit thresholds                           -15
+  Minimum expected cell size for chi-square              0.100D-01
+Maximum number of iterations for H1                           2000
+Convergence criterion for H1                             0.100D-03
+Optimization algorithm                                         EMA
+Random Starts Specifications
+  Number of initial stage random starts                        200
+  Number of final stage optimizations                           20
+  Number of initial stage iterations                            10
+  Initial stage convergence criterion                    0.100D+01
+  Random starts scale                                    0.500D+01
+  Random seed for generating random starts                       0
+
+Input data file(s)
+  model10.5_0b1df2aa760fe847b55c59562ce06d0d.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of missing data patterns             1
+     Number of y missing data patterns           1
+     Number of u missing data patterns           0
+
+
+COVARIANCE COVERAGE OF DATA
+
+Minimum covariance coverage value   0.100
+
+
+     PROPORTION OF DATA PRESENT FOR Y
+
+
+           Covariance Coverage
+              BMI1          BMI2          BMI3          BMI4          BMI5
+              ________      ________      ________      ________      ________
+ BMI1           1.000
+ BMI2           1.000         1.000
+ BMI3           1.000         1.000         1.000
+ BMI4           1.000         1.000         1.000         1.000
+ BMI5           1.000         1.000         1.000         1.000         1.000
+ BMI6           1.000         1.000         1.000         1.000         1.000
+
+
+           Covariance Coverage
+              BMI6
+              ________
+ BMI6           1.000
+
+
+RANDOM STARTS RESULTS RANKED FROM THE BEST TO THE WORST LOGLIKELIHOOD VALUES
+
+Final stage loglikelihood values at local maxima, seeds, and initial stage start numbers:
+
+          -68667.359  27071            15
+          -68667.359  726035           191
+          -68667.871  592219           119
+          -68667.969  782200           84
+          -68667.969  136842           58
+          -68667.974  268217           83
+          -68667.974  422103           62
+          -68667.974  570908           98
+          -68667.974  587946           120
+          -68667.974  544048           87
+          -68667.974  281558           184
+          -68667.974  352277           42
+          -68667.974  93468            3
+          -68667.974  928287           197
+          -68667.974  551639           55
+          -68667.974  437181           135
+          -68667.974  848969           173
+          -68667.974  253358           2
+          -68667.974  913639           162
+          -68667.974  967902           52
+
+
+
+THE BEST LOGLIKELIHOOD VALUE HAS BEEN REPLICATED.  RERUN WITH AT LEAST TWICE THE
+RANDOM STARTS TO CHECK THAT THE BEST LOGLIKELIHOOD IS STILL OBTAINED AND REPLICATED.
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                       14
+
+Loglikelihood
+
+          H0 Value                      -68667.359
+          H0 Scaling Correction Factor      1.0195
+            for MLR
+
+Information Criteria
+
+          Akaike (AIC)                  137362.718
+          Bayesian (BIC)                137454.867
+          Sample-Size Adjusted BIC      137410.379
+            (n* = (n + 2) / 24)
+
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON THE ESTIMATED MODEL
+
+    Latent
+   Classes
+
+       1       1699.34448          0.31853
+       2       3635.65552          0.68147
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON ESTIMATED POSTERIOR PROBABILITIES
+
+    Latent
+   Classes
+
+       1       1699.34447          0.31853
+       2       3635.65553          0.68147
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASSES
+BASED ON THEIR MOST LIKELY LATENT CLASS MEMBERSHIP
+
+Class Counts and Proportions
+
+    Latent
+   Classes
+
+       1              875          0.16401
+       2             4460          0.83599
+
+
+CLASSIFICATION QUALITY
+
+     Entropy                         0.201
+
+
+Average Latent Class Probabilities for Most Likely Latent Class Membership (Row)
+by Latent Class (Column)
+
+           1        2
+
+    1   0.616    0.384
+    2   0.260    0.740
+
+
+Classification Probabilities for the Most Likely Latent Class Membership (Column)
+by Latent Class (Row)
+
+           1        2
+
+    1   0.317    0.683
+    2   0.093    0.907
+
+
+Logits for the Classification Probabilities for the Most Likely Latent Class Membership (Column)
+by Latent Class (Row)
+
+              1        2
+
+    1     -0.768    0.000
+    2     -2.283    0.000
+
+
+MODEL RESULTS
+
+                                                    Two-Tailed
+                    Estimate       S.E.  Est./S.E.    P-Value
+
+Latent Class 1
+
+ I        BY
+    BMI1               1.000      0.000    999.000    999.000
+    BMI2               1.000      0.000    999.000    999.000
+    BMI3               1.000      0.000    999.000    999.000
+    BMI4               1.000      0.000    999.000    999.000
+    BMI5               1.000      0.000    999.000    999.000
+    BMI6               1.000      0.000    999.000    999.000
+
+ S        BY
+    BMI1               0.000      0.000    999.000    999.000
+    BMI2               1.000      0.000    999.000    999.000
+    BMI3               2.000      0.000    999.000    999.000
+    BMI4               3.000      0.000    999.000    999.000
+    BMI5               4.000      0.000    999.000    999.000
+    BMI6               5.000      0.000    999.000    999.000
+
+ I        WITH
+    S                  0.122      0.250      0.489      0.625
+
+ Means
+    I                 28.674      1.400     20.482      0.000
+    S                 -0.112      0.132     -0.846      0.398
+
+ Intercepts
+    BMI1               0.000      0.000    999.000    999.000
+    BMI2               0.000      0.000    999.000    999.000
+    BMI3               0.000      0.000    999.000    999.000
+    BMI4               0.000      0.000    999.000    999.000
+    BMI5               0.000      0.000    999.000    999.000
+    BMI6               0.000      0.000    999.000    999.000
+
+ Variances
+    I                 22.377      2.615      8.557      0.000
+    S                  0.165      0.022      7.622      0.000
+
+ Residual Variances
+    BMI1               1.632      0.052     31.111      0.000
+    BMI2               1.361      0.038     35.838      0.000
+    BMI3               1.567      0.037     42.452      0.000
+    BMI4               1.823      0.043     42.744      0.000
+    BMI5               1.478      0.043     34.516      0.000
+    BMI6               2.627      0.072     36.551      0.000
+
+Latent Class 2
+
+ I        BY
+    BMI1               1.000      0.000    999.000    999.000
+    BMI2               1.000      0.000    999.000    999.000
+    BMI3               1.000      0.000    999.000    999.000
+    BMI4               1.000      0.000    999.000    999.000
+    BMI5               1.000      0.000    999.000    999.000
+    BMI6               1.000      0.000    999.000    999.000
+
+ S        BY
+    BMI1               0.000      0.000    999.000    999.000
+    BMI2               1.000      0.000    999.000    999.000
+    BMI3               2.000      0.000    999.000    999.000
+    BMI4               3.000      0.000    999.000    999.000
+    BMI5               4.000      0.000    999.000    999.000
+    BMI6               5.000      0.000    999.000    999.000
+
+ I        WITH
+    S                  0.122      0.250      0.489      0.625
+
+ Means
+    I                 26.527      1.153     23.003      0.000
+    S                  0.272      0.076      3.558      0.000
+
+ Intercepts
+    BMI1               0.000      0.000    999.000    999.000
+    BMI2               0.000      0.000    999.000    999.000
+    BMI3               0.000      0.000    999.000    999.000
+    BMI4               0.000      0.000    999.000    999.000
+    BMI5               0.000      0.000    999.000    999.000
+    BMI6               0.000      0.000    999.000    999.000
+
+ Variances
+    I                 22.377      2.615      8.557      0.000
+    S                  0.165      0.022      7.622      0.000
+
+ Residual Variances
+    BMI1               1.632      0.052     31.111      0.000
+    BMI2               1.361      0.038     35.838      0.000
+    BMI3               1.567      0.037     42.452      0.000
+    BMI4               1.823      0.043     42.744      0.000
+    BMI5               1.478      0.043     34.516      0.000
+    BMI6               2.627      0.072     36.551      0.000
+
+Categorical Latent Variables
+
+ Means
+    ETAC#1            -0.761      0.920     -0.827      0.408
+
+
+QUALITY OF NUMERICAL RESULTS
+
+     Condition Number for the Information Matrix              0.282E-04
+       (ratio of smallest to largest eigenvalue)
+
+
+CONFIDENCE INTERVALS OF MODEL RESULTS
+
+                  Lower .5%  Lower 2.5%    Lower 5%    Estimate    Upper 5%  Upper 2.5%   Upper .5%
+
+Latent Class 1
+
+ I        BY
+    BMI1             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI2             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI3             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI4             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI5             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI6             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+
+ S        BY
+    BMI1             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI2             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI3             2.000       2.000       2.000       2.000       2.000       2.000       2.000
+    BMI4             3.000       3.000       3.000       3.000       3.000       3.000       3.000
+    BMI5             4.000       4.000       4.000       4.000       4.000       4.000       4.000
+    BMI6             5.000       5.000       5.000       5.000       5.000       5.000       5.000
+
+ I        WITH
+    S               -0.521      -0.367      -0.288       0.122       0.533       0.611       0.765
+
+ Means
+    I               25.068      25.930      26.371      28.674      30.977      31.418      32.280
+    S               -0.452      -0.371      -0.329      -0.112       0.106       0.147       0.229
+
+ Intercepts
+    BMI1             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI2             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI3             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI4             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI5             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI6             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+
+ Variances
+    I               15.641      17.251      18.075      22.377      26.679      27.502      29.113
+    S                0.109       0.123       0.130       0.165       0.201       0.208       0.221
+
+ Residual Variances
+    BMI1             1.497       1.529       1.545       1.632       1.718       1.734       1.767
+    BMI2             1.263       1.286       1.298       1.361       1.423       1.435       1.458
+    BMI3             1.472       1.495       1.506       1.567       1.628       1.639       1.662
+    BMI4             1.713       1.739       1.753       1.823       1.893       1.907       1.933
+    BMI5             1.368       1.394       1.407       1.478       1.548       1.562       1.588
+    BMI6             2.442       2.486       2.509       2.627       2.745       2.768       2.812
+
+Latent Class 2
+
+ I        BY
+    BMI1             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI2             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI3             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI4             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI5             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI6             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+
+ S        BY
+    BMI1             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI2             1.000       1.000       1.000       1.000       1.000       1.000       1.000
+    BMI3             2.000       2.000       2.000       2.000       2.000       2.000       2.000
+    BMI4             3.000       3.000       3.000       3.000       3.000       3.000       3.000
+    BMI5             4.000       4.000       4.000       4.000       4.000       4.000       4.000
+    BMI6             5.000       5.000       5.000       5.000       5.000       5.000       5.000
+
+ I        WITH
+    S               -0.521      -0.367      -0.288       0.122       0.533       0.611       0.765
+
+ Means
+    I               23.557      24.267      24.630      26.527      28.425      28.788      29.498
+    S                0.075       0.122       0.146       0.272       0.397       0.422       0.469
+
+ Intercepts
+    BMI1             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI2             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI3             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI4             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI5             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+    BMI6             0.000       0.000       0.000       0.000       0.000       0.000       0.000
+
+ Variances
+    I               15.641      17.251      18.075      22.377      26.679      27.502      29.113
+    S                0.109       0.123       0.130       0.165       0.201       0.208       0.221
+
+ Residual Variances
+    BMI1             1.497       1.529       1.545       1.632       1.718       1.734       1.767
+    BMI2             1.263       1.286       1.298       1.361       1.423       1.435       1.458
+    BMI3             1.472       1.495       1.506       1.567       1.628       1.639       1.662
+    BMI4             1.713       1.739       1.753       1.823       1.893       1.907       1.933
+    BMI5             1.368       1.394       1.407       1.478       1.548       1.562       1.588
+    BMI6             2.442       2.486       2.509       2.627       2.745       2.768       2.812
+
+Categorical Latent Variables
+
+ Means
+    ETAC#1          -3.131      -2.564      -2.274      -0.761       0.753       1.043       1.610
+
+
+TECHNICAL 11 OUTPUT
+
+     Random Starts Specifications for the k-1 Class Analysis Model
+        Number of initial stage random starts                 200
+        Number of final stage optimizations                    20
+
+
+
+     VUONG-LO-MENDELL-RUBIN LIKELIHOOD RATIO TEST FOR 1 (H0) VERSUS 2 CLASSES
+
+          H0 Loglikelihood Value                       -68667.974
+          2 Times the Loglikelihood Difference              1.231
+          Difference in the Number of Parameters                3
+          Mean                                              4.623
+          Standard Deviation                                4.589
+          P-Value                                          0.7936
+
+     LO-MENDELL-RUBIN ADJUSTED LRT TEST
+
+          Value                                             1.185
+          P-Value                                          0.8021
+
+
+TECHNICAL 14 OUTPUT
+
+     Random Starts Specifications for the k-1 Class Analysis Model
+        Number of initial stage random starts                 200
+        Number of final stage optimizations                    20
+
+     Random Starts Specification for the k-1 Class Model for Generated Data
+        Number of initial stage random starts                   0
+        Number of final stage optimizations for the
+           initial stage random starts                          0
+     Random Starts Specification for the k Class Model for Generated Data
+        Number of initial stage random starts                  40
+        Number of final stage optimizations                     8
+     Number of bootstrap draws requested                   Varies
+
+
+     PARAMETRIC BOOTSTRAPPED LIKELIHOOD RATIO TEST FOR 1 (H0) VERSUS 2 CLASSES
+
+          H0 Loglikelihood Value                       -68667.974
+          2 Times the Loglikelihood Difference              1.231
+          Difference in the Number of Parameters                3
+          Approximate P-Value                              0.6667
+          Successful Bootstrap Draws                            3
+
+
+     Beginning Time:  16:28:09
+        Ending Time:  16:28:19
+       Elapsed Time:  00:00:10
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2015 Muthen & Muthen

@@ -1,0 +1,97 @@
+TITLE:
+Newsom Longitudinal SEM Chapter 10, Example 10.4,
+    Latent Transition and Growth Mixture Models;
+DATA:
+FILE = "model10.4.a_f40135823d0c46350fc11729798940ce.dat";
+ 
+VARIABLE:
+NAMES = cesdna1 cesdpa1 cesdso1 cesdna2 cesdpa2 cesdso2 cesdna3 cesdpa3 cesdso3
+     cesdna4 cesdpa4 cesdso4 cesdna5 cesdpa5 cesdso5 cesdna6 cesdpa6 cesdso6; 
+ MISSING=.;
+ 
+    usevariables= 
+    cesdna1 cesdpa1 cesdso1
+    cesdna2 cesdpa2 cesdso2
+    cesdna3 cesdpa3 cesdso3
+    cesdna4 cesdpa4 cesdso4
+    cesdna5 cesdpa5 cesdso5
+    cesdna6 cesdpa6 cesdso6;
+    
+    classes = etac1(2) etac2(2) etac3(2) etac4(2) etac5(2) etac6(2);   
+  
+ANALYSIS:
+
+  type = mixture;
+  
+MODEL:
+
+  %OVERALL%
+	[etac2#1-etac6#1];
+  etac2 on etac1;
+  etac3 on etac2; 
+	etac4 on etac3;
+  etac5 on etac4;
+  etac6 on etac5;
+    
+  MODEL etac1:
+	%etac1#1%
+	[cesdna1] (3);
+  [cesdpa1] (4);
+  [cesdso1] (5);
+	%etac1#2%
+	[cesdna1] (6);
+  [cesdpa1] (7);
+  [cesdso1] (8);
+  
+  MODEL etac2:
+	%etac2#1%
+	[cesdna2] (3);
+  [cesdpa2] (4);
+  [cesdso2] (5);
+	%etac2#2%
+	[cesdna2] (6);
+  [cesdpa2] (7);
+  [cesdso2] (8);
+  
+  MODEL etac3:
+	%etac3#1%
+	[cesdna3] (3);
+  [cesdpa3] (4);
+  [cesdso3] (5);
+	%etac3#2%
+	[cesdna3] (6);
+  [cesdpa3] (7);
+  [cesdso3] (8);
+  
+  MODEL etac4:
+	%etac4#1%
+	[cesdna4] (3);
+  [cesdpa4] (4);
+  [cesdso4] (5);
+	%etac4#2%
+	[cesdna4] (6);
+  [cesdpa4] (7);
+  [cesdso4] (8);
+  
+  MODEL etac5:
+	%etac5#1%
+	[cesdna5] (3);
+  [cesdpa5] (4);
+  [cesdso5] (5);
+	%etac5#2%
+	[cesdna5] (6);
+  [cesdpa5] (7);
+  [cesdso5] (8);
+  
+  MODEL etac6:
+	%etac6#1%
+	[cesdna6] (3);
+  [cesdpa6] (4);
+  [cesdso6] (5);
+	%etac6#2%
+	[cesdna6] (6);
+  [cesdpa6] (7);
+  [cesdso6] (8);
+  
+OUTPUT:
+cinterval

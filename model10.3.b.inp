@@ -1,0 +1,66 @@
+TITLE:
+Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Models;
+DATA:
+FILE = "model3.3.a_cfdcd2d9d0069820543612d3e12d7d7a.dat";
+ 
+VARIABLE:
+NAMES = diab1 diab2 diab3 diab4 diab5 diab6; 
+ MISSING=.;
+ 
+  usevariables = diab1 diab2 diab3 diab4 diab5 diab6;
+  categorical  = diab1 diab2 diab3 diab4 diab5 diab6;
+  classes = etac1(2) etac2(2) etac3(2) etac4(2) etac5(2) etac6(2);
+  
+ANALYSIS:
+
+  type = mixture;
+  
+MODEL:
+
+  !stationarity model;
+  %OVERALL%
+	[etac2#1-etac6#1] (1);
+	etac2 on etac1 (2);
+  etac3 on etac2 (2); 
+	etac4 on etac3 (2);
+  etac5 on etac4 (2);
+  etac6 on etac5 (2);
+	
+	MODEL etac1:
+	%etac1#1%
+	[diab1$1] (3);
+	%etac1#2%
+	[diab1$1] (4);
+	
+	MODEL etac2:
+	%etac2#1%
+	[diab2$1] (3) ;
+	%etac2#2%
+	[diab2$1] (4);
+	
+	MODEL etac3:
+	%etac3#1%
+	[diab3$1] (3);
+	%etac3#2%
+	[diab3$1] (4);
+	
+	MODEL etac4:
+	%etac4#1%
+	[diab4$1] (3);
+	%etac4#2%
+	[diab4$1] (4);
+	
+	MODEL etac5:
+	%etac5#1%
+	[diab5$1] (3);
+	%etac5#2%
+	[diab5$1] (4);
+	
+	MODEL etac6:
+	%etac6#1%
+	[diab6$1] (3);
+	%etac6#2%
+	[diab6$1] (4);
+  
+OUTPUT:
+cinterval! TECH8 on output line requests optimization history;

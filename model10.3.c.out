@@ -1,0 +1,295 @@
+Mplus VERSION 7.4 (Mac)
+MUTHEN & MUTHEN
+12/11/2019   4:17 PM
+
+INPUT INSTRUCTIONS
+
+  TITLE:
+  Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mod
+  DATA:
+  FILE = "model3.3.a_cfdcd2d9d0069820543612d3e12d7d7a.dat";
+
+  VARIABLE:
+  NAMES = diab1 diab2 diab3 diab4 diab5 diab6;
+   MISSING=.;
+
+    usevariables = diab1 diab2 diab3 diab4 diab5 diab6;
+    categorical  =       diab2 diab3 diab4 diab5 diab6;
+
+  ANALYSIS:
+
+    type = general;
+    estimator = ml;
+
+  MODEL:
+
+    !observed variable (manifest) model;
+  	[diab1@0];
+  	diab2 on diab1;
+    diab3 on diab2;
+  	diab4 on diab3;
+    diab5 on diab4;
+    diab6 on diab5;
+
+  OUTPUT:
+  cinterval
+
+
+
+*** WARNING
+  Input line exceeded 90 characters. Some input may be truncated.
+  Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mode
+   1 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+
+
+
+
+Newsom Longitudinal SEM Chapter 10, Example 10.1, Latent Transition and Growth Mixture Mod
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                        5335
+
+Number of dependent variables                                    5
+Number of independent variables                                  1
+Number of continuous latent variables                            0
+
+Observed dependent variables
+
+  Binary and ordered categorical (ordinal)
+   DIAB2       DIAB3       DIAB4       DIAB5       DIAB6
+
+Observed independent variables
+   DIAB1
+
+
+Estimator                                                       ML
+Information matrix                                        OBSERVED
+Optimization Specifications for the Quasi-Newton Algorithm for
+Continuous Outcomes
+  Maximum number of iterations                                 100
+  Convergence criterion                                  0.100D-05
+Optimization Specifications for the EM Algorithm
+  Maximum number of iterations                                 500
+  Convergence criteria
+    Loglikelihood change                                 0.100D-02
+    Relative loglikelihood change                        0.100D-05
+    Derivative                                           0.100D-02
+Optimization Specifications for the M step of the EM Algorithm for
+Categorical Latent variables
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-02
+  Basis for M step termination                           ITERATION
+Optimization Specifications for the M step of the EM Algorithm for
+Censored, Binary or Ordered Categorical (Ordinal), Unordered
+Categorical (Nominal) and Count Outcomes
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-02
+  Basis for M step termination                           ITERATION
+  Maximum value for logit thresholds                            15
+  Minimum value for logit thresholds                           -15
+  Minimum expected cell size for chi-square              0.100D-01
+Maximum number of iterations for H1                           2000
+Convergence criterion for H1                             0.100D-03
+Optimization algorithm                                         EMA
+Integration Specifications
+  Type                                                    STANDARD
+  Number of integration points                                  15
+  Dimensions of numerical integration                            0
+  Adaptive quadrature                                           ON
+Link                                                         LOGIT
+Cholesky                                                       OFF
+
+Input data file(s)
+  model3.3.a_cfdcd2d9d0069820543612d3e12d7d7a.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of missing data patterns             1
+     Number of y missing data patterns           1
+     Number of u missing data patterns           1
+
+
+COVARIANCE COVERAGE OF DATA
+
+Minimum covariance coverage value   0.100
+
+
+     PROPORTION OF DATA PRESENT FOR Y
+
+
+           Covariance Coverage
+              DIAB1
+              ________
+ DIAB1          1.000
+
+
+UNIVARIATE PROPORTIONS AND COUNTS FOR CATEGORICAL VARIABLES
+
+    DIAB2
+      Category 1    0.893         4764.000
+      Category 2    0.107          571.000
+    DIAB3
+      Category 1    0.875         4669.000
+      Category 2    0.125          666.000
+    DIAB4
+      Category 1    0.853         4553.000
+      Category 2    0.147          782.000
+    DIAB5
+      Category 1    0.827         4411.000
+      Category 2    0.173          924.000
+    DIAB6
+      Category 1    0.796         4249.000
+      Category 2    0.204         1086.000
+
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                       11
+
+Loglikelihood
+
+          H0 Value                       -8035.305
+
+Information Criteria
+
+          Akaike (AIC)                   16092.609
+          Bayesian (BIC)                 16165.012
+          Sample-Size Adjusted BIC       16130.057
+            (n* = (n + 2) / 24)
+
+
+
+MODEL RESULTS
+
+                                                    Two-Tailed
+                    Estimate       S.E.  Est./S.E.    P-Value
+
+ DIAB2      ON
+    DIAB1              4.420      0.131     33.645      0.000
+
+ DIAB3      ON
+    DIAB2              4.226      0.121     34.944      0.000
+
+ DIAB4      ON
+    DIAB3              4.093      0.113     36.153      0.000
+
+ DIAB5      ON
+    DIAB4              3.957      0.106     37.358      0.000
+
+ DIAB6      ON
+    DIAB5              3.797      0.099     38.523      0.000
+
+ Means
+    DIAB1              0.000      0.000    999.000    999.000
+
+ Thresholds
+    DIAB2$1            3.173      0.073     43.408      0.000
+    DIAB3$1            3.004      0.068     43.988      0.000
+    DIAB4$1            2.823      0.064     44.387      0.000
+    DIAB5$1            2.630      0.059     44.440      0.000
+    DIAB6$1            2.445      0.056     44.005      0.000
+
+ Variances
+    DIAB1              0.091      0.002     51.648      0.000
+
+
+LOGISTIC REGRESSION ODDS RATIO RESULTS
+
+ DIAB2      ON
+    DIAB1             83.127
+
+ DIAB3      ON
+    DIAB2             68.434
+
+ DIAB4      ON
+    DIAB3             59.909
+
+ DIAB5      ON
+    DIAB4             52.300
+
+ DIAB6      ON
+    DIAB5             44.547
+
+
+QUALITY OF NUMERICAL RESULTS
+
+     Condition Number for the Information Matrix              0.114E-03
+       (ratio of smallest to largest eigenvalue)
+
+
+CONFIDENCE INTERVALS OF MODEL RESULTS
+
+                  Lower .5%  Lower 2.5%    Lower 5%    Estimate    Upper 5%  Upper 2.5%   Upper .5%
+
+ DIAB2    ON
+    DIAB1            4.082       4.163       4.204       4.420       4.636       4.678       4.759
+
+ DIAB3    ON
+    DIAB2            3.914       3.989       4.027       4.226       4.425       4.463       4.537
+
+ DIAB4    ON
+    DIAB3            3.801       3.871       3.907       4.093       4.279       4.315       4.384
+
+ DIAB5    ON
+    DIAB4            3.684       3.749       3.783       3.957       4.131       4.165       4.230
+
+ DIAB6    ON
+    DIAB5            3.543       3.603       3.634       3.797       3.959       3.990       4.050
+
+ Means
+    DIAB1            0.000       0.000       0.000       0.000       0.000       0.000       0.000
+
+ Thresholds
+    DIAB2$1          2.985       3.030       3.053       3.173       3.293       3.316       3.361
+    DIAB3$1          2.828       2.870       2.892       3.004       3.117       3.138       3.180
+    DIAB4$1          2.659       2.698       2.718       2.823       2.927       2.947       2.986
+    DIAB5$1          2.478       2.514       2.533       2.630       2.728       2.746       2.783
+    DIAB6$1          2.302       2.336       2.354       2.445       2.536       2.554       2.588
+
+ Variances
+    DIAB1            0.086       0.087       0.088       0.091       0.094       0.094       0.095
+
+
+CONFIDENCE INTERVALS FOR THE LOGISTIC REGRESSION ODDS RATIO RESULTS
+
+ DIAB2    ON
+    DIAB1           59.261      64.255      66.970      83.127     103.182     107.542     116.605
+
+ DIAB3    ON
+    DIAB2           50.118      53.992      56.089      68.434      83.497      86.739      93.445
+
+ DIAB4    ON
+    DIAB3           44.756      47.987      49.730      59.909      72.172      74.792      80.192
+
+ DIAB5    ON
+    DIAB4           39.812      42.496      43.937      52.300      62.255      64.368      68.706
+
+ DIAB6    ON
+    DIAB5           34.560      36.722      37.880      44.547      52.387      54.039      57.420
+
+
+     Beginning Time:  16:17:30
+        Ending Time:  16:17:32
+       Elapsed Time:  00:00:02
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2015 Muthen & Muthen

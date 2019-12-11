@@ -1,0 +1,48 @@
+TITLE:
+Newsom Longitudinal SEM Chapter 10, Example 10.5,
+    Latent Transition and Growth Mixture Models;
+DATA:
+FILE = "model10.5_0b1df2aa760fe847b55c59562ce06d0d.dat";
+ 
+VARIABLE:
+NAMES = bmi1 bmi2 bmi3 bmi4 bmi5 bmi6; 
+ MISSING=.;
+ 
+    usevariables = 
+    bmi1 bmi2 bmi3 bmi4 bmi5 bmi6;
+    classes = etac (2); 
+  
+ANALYSIS:
+
+  type = mixture;
+  starts = 200 20;  ! this model required additional random starts
+  
+MODEL:
+
+  %overall%
+  i by bmi1@1 bmi2@1 bmi3@1 bmi4@1 bmi5@1 bmi6@1;
+  s by bmi1@0 bmi2@1 bmi3@2 bmi4@3 bmi5@4 bmi6@5;
+  i (1); 
+  s (2);
+  i with s;
+  [i s];
+  [bmi1-bmi6@0];
+  bmi1 bmi2 bmi3 bmi4 bmi5 bmi6 (5-10);
+  
+  ! bmi1-bmi5 pwith bmi2-bmi6 (10-14);  ! optional AR 1 residual correlations
+  ! note: equality constraints on means in this model had convergence issues;
+  
+  %etac#1%
+  ! [i] (3);  !comment out except for means test
+  ! [s] (4);  !comment out except for means test
+
+  %etac#2%  ! statements needed to free means in second class
+  [i];  ! add (3) for equal intercept mean test
+  [s];  ! add (4) for equal slope mean test
+  
+  ! Equivalent model using Mplus shortcuts;
+  ! %overall%
+  ! i s | bmi1@0 bmi2@1 bmi3@2 bmi4@3 bmi5@4 bmi6@5;
+  
+OUTPUT:
+tech11 tech14 cinterval

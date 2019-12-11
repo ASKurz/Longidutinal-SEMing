@@ -1,0 +1,63 @@
+TITLE:
+
+  Newsom Longitudinal SEM Chapter 10, Example 10.2,; 
+  Latent Transition and Growth Mixture Models;
+  
+DATA:
+FILE = "model10.2.a_c0c550c3db5f1c51b26f9b09906e174c.dat";
+ 
+VARIABLE:
+NAMES = w1dbothd w1dsadd w1dblued w1ddepd w2dbothd w2dsadd w2dblued w2ddepd; 
+ MISSING=.;
+ 
+  usevariables = w1dbothd w1dsadd w1dblued w1ddepd w2dbothd w2dsadd w2dblued w2ddepd;
+  categorical  = w1dbothd w1dsadd w1dblued w1ddepd w2dbothd w2dsadd w2dblued w2ddepd;
+  classes = etac1 (2) etac2 (2);
+  
+ANALYSIS:
+
+  type = mixture;
+  
+MODEL:
+
+  ! this time we cannot rely on defaults;
+  %overall%
+  etac2 on etac1;
+  [etac1#1];
+  ! note: mean of last class cannot be referenced;
+  
+  model etac1:    
+  %etac1#1%  
+  [w1dbothd$1] (1);
+  [w1dsadd$1]  (2);
+  [w1dblued$1] (3);
+  [w1ddepd$1]  (4);
+  
+  ! class 2 mean set to 0 by default and cannot be modified;
+  %etac1#2%  
+  [w1dbothd$1] (5);
+  [w1dsadd$1]  (6);
+  [w1dblued$1] (7);
+  [w1ddepd$1]  (8);
+  
+  ! note how we're holding the thresholds constant over time
+  model etac2:
+  ! class 2 mean estimated by default and cannot be specified;
+  %etac2#1% 
+  [w2dbothd$1] (1);
+  [w2dsadd$1]  (2);
+  [w2dblued$1] (3); 
+  [w2ddepd$1]  (4);
+  
+  ! class 2 mean set to 0 by default and cannot be modified;
+  %etac2#2%  
+  [w2dbothd$1] (5);
+  [w2dsadd$1]  (6);
+  [w2dblued$1] (7);
+  [w2ddepd$1]  (8);
+  
+OUTPUT:
+
+  ! conduct the LMR and the VLMR likelihood ratio tests; 
+  tech11 tech14 cinterval;
+  

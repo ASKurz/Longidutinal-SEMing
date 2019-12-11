@@ -1,0 +1,972 @@
+Mplus VERSION 7.4 (Mac)
+MUTHEN & MUTHEN
+12/11/2019   4:17 PM
+
+INPUT INSTRUCTIONS
+
+  TITLE:
+
+    Newsom Longitudinal SEM Chapter 10, Example 10.2,;
+    Latent Transition and Growth Mixture Models;
+
+  DATA:
+  FILE = "model10.2.a_c0c550c3db5f1c51b26f9b09906e174c.dat";
+
+  VARIABLE:
+  NAMES = w1dbothd w1dsadd w1dblued w1ddepd w2dbothd w2dsadd w2dblued w2ddepd;
+   MISSING=.;
+
+    usevariables = w1dbothd w1dsadd w1dblued w1ddepd w2dbothd w2dsadd w2dblued w2ddepd;
+    categorical  = w1dbothd w1dsadd w1dblued w1ddepd w2dbothd w2dsadd w2dblued w2ddepd;
+    classes = etac1 (2) etac2 (2);
+
+  ANALYSIS:
+
+    type = mixture;
+
+  MODEL:
+
+    ! this time we cannot rely on defaults;
+    %overall%
+    etac2 on etac1;
+    [etac1#1];
+    ! note: mean of last class cannot be referenced;
+
+    model etac1:
+    %etac1#1%
+    [w1dbothd$1] (1);
+    [w1dsadd$1]  (2);
+    [w1dblued$1] (3);
+    [w1ddepd$1]  (4);
+
+    ! class 2 mean set to 0 by default and cannot be modified;
+    %etac1#2%
+    [w1dbothd$1] (5);
+    [w1dsadd$1]  (6);
+    [w1dblued$1] (7);
+    [w1ddepd$1]  (8);
+
+    ! note how we're holding the thresholds constant over time
+    model etac2:
+    ! class 2 mean estimated by default and cannot be specified;
+    %etac2#1%
+    [w2dbothd$1] (1);
+    [w2dsadd$1]  (2);
+    [w2dblued$1] (3);
+    [w2ddepd$1]  (4);
+
+    ! class 2 mean set to 0 by default and cannot be modified;
+    %etac2#2%
+    [w2dbothd$1] (5);
+    [w2dsadd$1]  (6);
+    [w2dblued$1] (7);
+    [w2ddepd$1]  (8);
+
+  OUTPUT:
+
+    ! conduct the LMR and the VLMR likelihood ratio tests;
+    tech11 tech14 cinterval;
+
+
+
+
+*** WARNING in OUTPUT command
+  TECH11 option is not available for TYPE=MIXTURE with more than one
+  categorical latent variable.  Request for TECH11 is ignored.
+*** WARNING in OUTPUT command
+  TECH14 option is not available for TYPE=MIXTURE with more than one
+  categorical latent variable.  Request for TECH14 is ignored.
+   2 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+
+
+
+
+
+Newsom Longitudinal SEM Chapter 10, Example 10.2,;
+Latent Transition and Growth Mixture Models;
+
+SUMMARY OF ANALYSIS
+
+Number of groups                                                 1
+Number of observations                                         574
+
+Number of dependent variables                                    8
+Number of independent variables                                  0
+Number of continuous latent variables                            0
+Number of categorical latent variables                           2
+
+Observed dependent variables
+
+  Binary and ordered categorical (ordinal)
+   W1DBOTHD    W1DSADD     W1DBLUED    W1DDEPD     W2DBOTHD    W2DSADD
+   W2DBLUED    W2DDEPD
+
+Categorical latent variables
+   ETAC1       ETAC2
+
+
+Estimator                                                      MLR
+Information matrix                                        OBSERVED
+Optimization Specifications for the Quasi-Newton Algorithm for
+Continuous Outcomes
+  Maximum number of iterations                                 100
+  Convergence criterion                                  0.100D-05
+Optimization Specifications for the EM Algorithm
+  Maximum number of iterations                                 500
+  Convergence criteria
+    Loglikelihood change                                 0.100D-06
+    Relative loglikelihood change                        0.100D-06
+    Derivative                                           0.100D-05
+Optimization Specifications for the M step of the EM Algorithm for
+Categorical Latent variables
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-05
+  Basis for M step termination                           ITERATION
+Optimization Specifications for the M step of the EM Algorithm for
+Censored, Binary or Ordered Categorical (Ordinal), Unordered
+Categorical (Nominal) and Count Outcomes
+  Number of M step iterations                                    1
+  M step convergence criterion                           0.100D-05
+  Basis for M step termination                           ITERATION
+  Maximum value for logit thresholds                            15
+  Minimum value for logit thresholds                           -15
+  Minimum expected cell size for chi-square              0.100D-01
+Maximum number of iterations for H1                           2000
+Convergence criterion for H1                             0.100D-03
+Optimization algorithm                                         EMA
+Random Starts Specifications
+  Number of initial stage random starts                         20
+  Number of final stage optimizations                            4
+  Number of initial stage iterations                            10
+  Initial stage convergence criterion                    0.100D+01
+  Random starts scale                                    0.500D+01
+  Random seed for generating random starts                       0
+Parameterization                                             LOGIT
+Link                                                         LOGIT
+
+Input data file(s)
+  model10.2.a_c0c550c3db5f1c51b26f9b09906e174c.dat
+Input data format  FREE
+
+
+SUMMARY OF DATA
+
+     Number of missing data patterns             1
+     Number of y missing data patterns           0
+     Number of u missing data patterns           1
+
+
+COVARIANCE COVERAGE OF DATA
+
+Minimum covariance coverage value   0.100
+
+
+UNIVARIATE PROPORTIONS AND COUNTS FOR CATEGORICAL VARIABLES
+
+    W1DBOTHD
+      Category 1    0.606          348.000
+      Category 2    0.394          226.000
+    W1DSADD
+      Category 1    0.620          356.000
+      Category 2    0.380          218.000
+    W1DBLUED
+      Category 1    0.617          354.000
+      Category 2    0.383          220.000
+    W1DDEPD
+      Category 1    0.598          343.000
+      Category 2    0.402          231.000
+    W2DBOTHD
+      Category 1    0.622          357.000
+      Category 2    0.378          217.000
+    W2DSADD
+      Category 1    0.631          362.000
+      Category 2    0.369          212.000
+    W2DBLUED
+      Category 1    0.598          343.000
+      Category 2    0.402          231.000
+    W2DDEPD
+      Category 1    0.611          351.000
+      Category 2    0.389          223.000
+
+
+RANDOM STARTS RESULTS RANKED FROM THE BEST TO THE WORST LOGLIKELIHOOD VALUES
+
+Final stage loglikelihood values at local maxima, seeds, and initial stage start numbers:
+
+           -2744.438  462953           7
+           -2744.438  27071            15
+           -2744.438  unperturbed      0
+           -2744.438  608496           4
+
+
+
+THE BEST LOGLIKELIHOOD VALUE HAS BEEN REPLICATED.  RERUN WITH AT LEAST TWICE THE
+RANDOM STARTS TO CHECK THAT THE BEST LOGLIKELIHOOD IS STILL OBTAINED AND REPLICATED.
+
+
+THE MODEL ESTIMATION TERMINATED NORMALLY
+
+
+
+MODEL FIT INFORMATION
+
+Number of Free Parameters                       11
+
+Loglikelihood
+
+          H0 Value                       -2744.438
+          H0 Scaling Correction Factor      1.0935
+            for MLR
+
+Information Criteria
+
+          Akaike (AIC)                    5510.876
+          Bayesian (BIC)                  5558.755
+          Sample-Size Adjusted BIC        5523.834
+            (n* = (n + 2) / 24)
+
+Chi-Square Test of Model Fit for the Binary and Ordered Categorical
+(Ordinal) Outcomes
+
+          Pearson Chi-Square
+
+          Value                            304.541
+          Degrees of Freedom                   244
+          P-Value                           0.0051
+
+          Likelihood Ratio Chi-Square
+
+          Value                            310.037
+          Degrees of Freedom                   244
+          P-Value                           0.0027
+
+
+
+MODEL RESULTS USE THE LATENT CLASS VARIABLE ORDER
+
+   ETAC1  ETAC2
+
+  Latent Class Variable Patterns
+
+      ETAC1     ETAC2
+      Class     Class
+
+         1         1
+         1         2
+         2         1
+         2         2
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASS PATTERNS
+BASED ON THE ESTIMATED MODEL
+
+  Latent Class
+    Pattern
+
+    1  1        171.68378          0.29910
+    1  2         81.91534          0.14271
+    2  1         75.47712          0.13149
+    2  2        244.92376          0.42670
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR EACH LATENT CLASS VARIABLE
+BASED ON THE ESTIMATED MODEL
+
+  Latent Class
+    Variable    Class
+
+    ETAC1          1       253.59912          0.44181
+                   2       320.40088          0.55819
+    ETAC2          1       247.16090          0.43059
+                   2       326.83911          0.56941
+
+
+LATENT TRANSITION PROBABILITIES BASED ON THE ESTIMATED MODEL
+
+  ETAC1 Classes (Rows) by ETAC2 Classes (Columns)
+
+            1        2
+
+   1     0.677    0.323
+   2     0.236    0.764
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASS PATTERNS
+BASED ON ESTIMATED POSTERIOR PROBABILITIES
+
+  Latent Class
+    Pattern
+
+    1  1        171.68370          0.29910
+    1  2         81.91541          0.14271
+    2  1         75.47707          0.13149
+    2  2        244.92383          0.42670
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR EACH LATENT CLASS VARIABLE
+BASED ON ESTIMATED POSTERIOR PROBABILITIES
+
+  Latent Class
+    Variable    Class
+
+    ETAC1          1       253.59911          0.44181
+                   2       320.40091          0.55819
+    ETAC2          1       247.16077          0.43059
+                   2       326.83923          0.56941
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR THE LATENT CLASS PATTERNS
+BASED ON THEIR MOST LIKELY LATENT CLASS PATTERN
+
+Class Counts and Proportions
+
+  Latent Class
+    Pattern
+
+    1  1              157          0.27352
+    1  2               84          0.14634
+    2  1               85          0.14808
+    2  2              248          0.43206
+
+
+FINAL CLASS COUNTS AND PROPORTIONS FOR EACH LATENT CLASS VARIABLE
+BASED ON THEIR MOST LIKELY LATENT CLASS PATTERN
+
+  Latent Class
+    Variable    Class
+
+    ETAC1          1             241          0.41986
+                   2             333          0.58014
+    ETAC2          1             242          0.42160
+                   2             332          0.57840
+
+
+CLASSIFICATION QUALITY
+
+     Entropy                         0.685
+
+
+Average Latent Class Probabilities for Most Likely Latent Class Pattern (Row)
+by Latent Class Pattern (Column)
+
+  Latent Class Variable Patterns
+
+  Latent Class      ETAC1     ETAC2
+   Pattern No.      Class     Class
+
+         1             1         1
+         2             1         2
+         3             2         1
+         4             2         2
+
+           1        2        3        4
+
+    1   0.890    0.044    0.048    0.018
+    2   0.144    0.712    0.003    0.141
+    3   0.186    0.005    0.672    0.136
+    4   0.016    0.060    0.042    0.882
+
+
+MODEL RESULTS
+
+                                                    Two-Tailed
+                    Estimate       S.E.  Est./S.E.    P-Value
+
+Latent Class Pattern 1 1
+
+ Thresholds
+    W1DBOTHD$1        -0.476      0.137     -3.480      0.001
+    W1DSADD$1         -0.864      0.168     -5.140      0.000
+    W1DBLUED$1        -0.883      0.151     -5.852      0.000
+    W1DDEPD$1         -1.219      0.202     -6.039      0.000
+    W2DBOTHD$1        -0.476      0.137     -3.480      0.001
+    W2DSADD$1         -0.864      0.168     -5.140      0.000
+    W2DBLUED$1        -0.883      0.151     -5.852      0.000
+    W2DDEPD$1         -1.219      0.202     -6.039      0.000
+
+Latent Class Pattern 1 2
+
+ Thresholds
+    W1DBOTHD$1        -0.476      0.137     -3.480      0.001
+    W1DSADD$1         -0.864      0.168     -5.140      0.000
+    W1DBLUED$1        -0.883      0.151     -5.852      0.000
+    W1DDEPD$1         -1.219      0.202     -6.039      0.000
+    W2DBOTHD$1         1.342      0.134      9.992      0.000
+    W2DSADD$1          1.992      0.210      9.494      0.000
+    W2DBLUED$1         1.739      0.190      9.132      0.000
+    W2DDEPD$1          2.151      0.270      7.957      0.000
+
+Latent Class Pattern 2 1
+
+ Thresholds
+    W1DBOTHD$1         1.342      0.134      9.992      0.000
+    W1DSADD$1          1.992      0.210      9.494      0.000
+    W1DBLUED$1         1.739      0.190      9.132      0.000
+    W1DDEPD$1          2.151      0.270      7.957      0.000
+    W2DBOTHD$1        -0.476      0.137     -3.480      0.001
+    W2DSADD$1         -0.864      0.168     -5.140      0.000
+    W2DBLUED$1        -0.883      0.151     -5.852      0.000
+    W2DDEPD$1         -1.219      0.202     -6.039      0.000
+
+Latent Class Pattern 2 2
+
+ Thresholds
+    W1DBOTHD$1         1.342      0.134      9.992      0.000
+    W1DSADD$1          1.992      0.210      9.494      0.000
+    W1DBLUED$1         1.739      0.190      9.132      0.000
+    W1DDEPD$1          2.151      0.270      7.957      0.000
+    W2DBOTHD$1         1.342      0.134      9.992      0.000
+    W2DSADD$1          1.992      0.210      9.494      0.000
+    W2DBLUED$1         1.739      0.190      9.132      0.000
+    W2DDEPD$1          2.151      0.270      7.957      0.000
+
+Categorical Latent Variables
+
+ ETAC2#1  ON
+    ETAC1#1            1.917      0.281      6.815      0.000
+
+ Means
+    ETAC1#1           -0.234      0.169     -1.384      0.166
+    ETAC2#1           -1.177      0.187     -6.305      0.000
+
+
+RESULTS IN PROBABILITY SCALE
+
+Latent Class Pattern 1 1
+
+ W1DBOTHD
+    Category 1         0.383      0.032     11.855      0.000
+    Category 2         0.617      0.032     19.081      0.000
+ W1DSADD
+    Category 1         0.297      0.035      8.457      0.000
+    Category 2         0.703      0.035     20.064      0.000
+ W1DBLUED
+    Category 1         0.293      0.031      9.368      0.000
+    Category 2         0.707      0.031     22.655      0.000
+ W1DDEPD
+    Category 1         0.228      0.036      6.418      0.000
+    Category 2         0.772      0.036     21.718      0.000
+ W2DBOTHD
+    Category 1         0.383      0.032     11.855      0.000
+    Category 2         0.617      0.032     19.081      0.000
+ W2DSADD
+    Category 1         0.297      0.035      8.457      0.000
+    Category 2         0.703      0.035     20.064      0.000
+ W2DBLUED
+    Category 1         0.293      0.031      9.368      0.000
+    Category 2         0.707      0.031     22.655      0.000
+ W2DDEPD
+    Category 1         0.228      0.036      6.418      0.000
+    Category 2         0.772      0.036     21.718      0.000
+
+Latent Class Pattern 1 2
+
+ W1DBOTHD
+    Category 1         0.383      0.032     11.855      0.000
+    Category 2         0.617      0.032     19.081      0.000
+ W1DSADD
+    Category 1         0.297      0.035      8.457      0.000
+    Category 2         0.703      0.035     20.064      0.000
+ W1DBLUED
+    Category 1         0.293      0.031      9.368      0.000
+    Category 2         0.707      0.031     22.655      0.000
+ W1DDEPD
+    Category 1         0.228      0.036      6.418      0.000
+    Category 2         0.772      0.036     21.718      0.000
+ W2DBOTHD
+    Category 1         0.793      0.022     35.937      0.000
+    Category 2         0.207      0.022      9.395      0.000
+ W2DSADD
+    Category 1         0.880      0.022     39.697      0.000
+    Category 2         0.120      0.022      5.418      0.000
+ W2DBLUED
+    Category 1         0.851      0.024     35.140      0.000
+    Category 2         0.149      0.024      6.175      0.000
+ W2DDEPD
+    Category 1         0.896      0.025     35.490      0.000
+    Category 2         0.104      0.025      4.130      0.000
+
+Latent Class Pattern 2 1
+
+ W1DBOTHD
+    Category 1         0.793      0.022     35.937      0.000
+    Category 2         0.207      0.022      9.395      0.000
+ W1DSADD
+    Category 1         0.880      0.022     39.697      0.000
+    Category 2         0.120      0.022      5.418      0.000
+ W1DBLUED
+    Category 1         0.851      0.024     35.140      0.000
+    Category 2         0.149      0.024      6.175      0.000
+ W1DDEPD
+    Category 1         0.896      0.025     35.490      0.000
+    Category 2         0.104      0.025      4.130      0.000
+ W2DBOTHD
+    Category 1         0.383      0.032     11.855      0.000
+    Category 2         0.617      0.032     19.081      0.000
+ W2DSADD
+    Category 1         0.297      0.035      8.457      0.000
+    Category 2         0.703      0.035     20.064      0.000
+ W2DBLUED
+    Category 1         0.293      0.031      9.368      0.000
+    Category 2         0.707      0.031     22.655      0.000
+ W2DDEPD
+    Category 1         0.228      0.036      6.418      0.000
+    Category 2         0.772      0.036     21.718      0.000
+
+Latent Class Pattern 2 2
+
+ W1DBOTHD
+    Category 1         0.793      0.022     35.937      0.000
+    Category 2         0.207      0.022      9.395      0.000
+ W1DSADD
+    Category 1         0.880      0.022     39.697      0.000
+    Category 2         0.120      0.022      5.418      0.000
+ W1DBLUED
+    Category 1         0.851      0.024     35.140      0.000
+    Category 2         0.149      0.024      6.175      0.000
+ W1DDEPD
+    Category 1         0.896      0.025     35.490      0.000
+    Category 2         0.104      0.025      4.130      0.000
+ W2DBOTHD
+    Category 1         0.793      0.022     35.937      0.000
+    Category 2         0.207      0.022      9.395      0.000
+ W2DSADD
+    Category 1         0.880      0.022     39.697      0.000
+    Category 2         0.120      0.022      5.418      0.000
+ W2DBLUED
+    Category 1         0.851      0.024     35.140      0.000
+    Category 2         0.149      0.024      6.175      0.000
+ W2DDEPD
+    Category 1         0.896      0.025     35.490      0.000
+    Category 2         0.104      0.025      4.130      0.000
+
+
+LATENT CLASS ODDS RATIO RESULTS
+
+Latent Class Pattern 1 1 Compared to Latent Class Pattern 1 2
+
+ W1DBOTHD
+    Category > 1       1.000      0.000    999.000    999.000
+ W1DSADD
+    Category > 1       1.000      0.000    999.000    999.000
+ W1DBLUED
+    Category > 1       1.000      0.000    999.000    999.000
+ W1DDEPD
+    Category > 1       1.000      0.000    999.000    999.000
+ W2DBOTHD
+    Category > 1       6.157      1.080      5.702      0.000
+ W2DSADD
+    Category > 1      17.382      3.790      4.587      0.000
+ W2DBLUED
+    Category > 1      13.761      2.728      5.045      0.000
+ W2DDEPD
+    Category > 1      29.081      7.767      3.744      0.000
+
+Latent Class Pattern 1 1 Compared to Latent Class Pattern 2 1
+
+ W1DBOTHD
+    Category > 1       6.157      1.080      5.702      0.000
+ W1DSADD
+    Category > 1      17.382      3.790      4.587      0.000
+ W1DBLUED
+    Category > 1      13.761      2.728      5.045      0.000
+ W1DDEPD
+    Category > 1      29.081      7.767      3.744      0.000
+ W2DBOTHD
+    Category > 1       1.000      0.000    999.000    999.000
+ W2DSADD
+    Category > 1       1.000      0.000    999.000    999.000
+ W2DBLUED
+    Category > 1       1.000      0.000    999.000    999.000
+ W2DDEPD
+    Category > 1       1.000      0.000    999.000    999.000
+
+Latent Class Pattern 1 1 Compared to Latent Class Pattern 2 2
+
+ W1DBOTHD
+    Category > 1       6.157      1.080      5.702      0.000
+ W1DSADD
+    Category > 1      17.382      3.790      4.587      0.000
+ W1DBLUED
+    Category > 1      13.761      2.728      5.045      0.000
+ W1DDEPD
+    Category > 1      29.081      7.767      3.744      0.000
+ W2DBOTHD
+    Category > 1       6.157      1.080      5.702      0.000
+ W2DSADD
+    Category > 1      17.382      3.790      4.587      0.000
+ W2DBLUED
+    Category > 1      13.761      2.728      5.045      0.000
+ W2DDEPD
+    Category > 1      29.081      7.767      3.744      0.000
+
+Latent Class Pattern 1 2 Compared to Latent Class Pattern 2 1
+
+ W1DBOTHD
+    Category > 1       6.157      1.080      5.702      0.000
+ W1DSADD
+    Category > 1      17.382      3.790      4.587      0.000
+ W1DBLUED
+    Category > 1      13.761      2.728      5.045      0.000
+ W1DDEPD
+    Category > 1      29.081      7.767      3.744      0.000
+ W2DBOTHD
+    Category > 1       0.162      0.028      5.702      0.000
+ W2DSADD
+    Category > 1       0.058      0.013      4.587      0.000
+ W2DBLUED
+    Category > 1       0.073      0.014      5.045      0.000
+ W2DDEPD
+    Category > 1       0.034      0.009      3.744      0.000
+
+Latent Class Pattern 1 2 Compared to Latent Class Pattern 2 2
+
+ W1DBOTHD
+    Category > 1       6.157      1.080      5.702      0.000
+ W1DSADD
+    Category > 1      17.382      3.790      4.587      0.000
+ W1DBLUED
+    Category > 1      13.761      2.728      5.045      0.000
+ W1DDEPD
+    Category > 1      29.081      7.767      3.744      0.000
+ W2DBOTHD
+    Category > 1       1.000      0.000    999.000    999.000
+ W2DSADD
+    Category > 1       1.000      0.000    999.000    999.000
+ W2DBLUED
+    Category > 1       1.000      0.000    999.000    999.000
+ W2DDEPD
+    Category > 1       1.000      0.000    999.000    999.000
+
+Latent Class Pattern 2 1 Compared to Latent Class Pattern 2 2
+
+ W1DBOTHD
+    Category > 1       1.000      0.000    999.000    999.000
+ W1DSADD
+    Category > 1       1.000      0.000    999.000    999.000
+ W1DBLUED
+    Category > 1       1.000      0.000    999.000    999.000
+ W1DDEPD
+    Category > 1       1.000      0.000    999.000    999.000
+ W2DBOTHD
+    Category > 1       6.157      1.080      5.702      0.000
+ W2DSADD
+    Category > 1      17.382      3.790      4.587      0.000
+ W2DBLUED
+    Category > 1      13.761      2.728      5.045      0.000
+ W2DDEPD
+    Category > 1      29.081      7.767      3.744      0.000
+
+
+QUALITY OF NUMERICAL RESULTS
+
+     Condition Number for the Information Matrix              0.621E-01
+       (ratio of smallest to largest eigenvalue)
+
+
+CONFIDENCE INTERVALS OF MODEL RESULTS
+
+                  Lower .5%  Lower 2.5%    Lower 5%    Estimate    Upper 5%  Upper 2.5%   Upper .5%
+
+Latent Class Pattern 1 1
+
+ Thresholds
+    W1DBOTHD$1      -0.828      -0.744      -0.701      -0.476      -0.251      -0.208      -0.124
+    W1DSADD$1       -1.297      -1.193      -1.140      -0.864      -0.587      -0.534      -0.431
+    W1DBLUED$1      -1.272      -1.179      -1.131      -0.883      -0.635      -0.587      -0.494
+    W1DDEPD$1       -1.739      -1.615      -1.551      -1.219      -0.887      -0.823      -0.699
+    W2DBOTHD$1      -0.828      -0.744      -0.701      -0.476      -0.251      -0.208      -0.124
+    W2DSADD$1       -1.297      -1.193      -1.140      -0.864      -0.587      -0.534      -0.431
+    W2DBLUED$1      -1.272      -1.179      -1.131      -0.883      -0.635      -0.587      -0.494
+    W2DDEPD$1       -1.739      -1.615      -1.551      -1.219      -0.887      -0.823      -0.699
+
+Latent Class Pattern 1 2
+
+ Thresholds
+    W1DBOTHD$1      -0.828      -0.744      -0.701      -0.476      -0.251      -0.208      -0.124
+    W1DSADD$1       -1.297      -1.193      -1.140      -0.864      -0.587      -0.534      -0.431
+    W1DBLUED$1      -1.272      -1.179      -1.131      -0.883      -0.635      -0.587      -0.494
+    W1DDEPD$1       -1.739      -1.615      -1.551      -1.219      -0.887      -0.823      -0.699
+    W2DBOTHD$1       0.996       1.078       1.121       1.342       1.562       1.605       1.687
+    W2DSADD$1        1.451       1.580       1.646       1.992       2.337       2.403       2.532
+    W2DBLUED$1       1.248       1.366       1.426       1.739       2.052       2.112       2.229
+    W2DDEPD$1        1.455       1.621       1.706       2.151       2.596       2.681       2.847
+
+Latent Class Pattern 2 1
+
+ Thresholds
+    W1DBOTHD$1       0.996       1.078       1.121       1.342       1.562       1.605       1.687
+    W1DSADD$1        1.451       1.580       1.646       1.992       2.337       2.403       2.532
+    W1DBLUED$1       1.248       1.366       1.426       1.739       2.052       2.112       2.229
+    W1DDEPD$1        1.455       1.621       1.706       2.151       2.596       2.681       2.847
+    W2DBOTHD$1      -0.828      -0.744      -0.701      -0.476      -0.251      -0.208      -0.124
+    W2DSADD$1       -1.297      -1.193      -1.140      -0.864      -0.587      -0.534      -0.431
+    W2DBLUED$1      -1.272      -1.179      -1.131      -0.883      -0.635      -0.587      -0.494
+    W2DDEPD$1       -1.739      -1.615      -1.551      -1.219      -0.887      -0.823      -0.699
+
+Latent Class Pattern 2 2
+
+ Thresholds
+    W1DBOTHD$1       0.996       1.078       1.121       1.342       1.562       1.605       1.687
+    W1DSADD$1        1.451       1.580       1.646       1.992       2.337       2.403       2.532
+    W1DBLUED$1       1.248       1.366       1.426       1.739       2.052       2.112       2.229
+    W1DDEPD$1        1.455       1.621       1.706       2.151       2.596       2.681       2.847
+    W2DBOTHD$1       0.996       1.078       1.121       1.342       1.562       1.605       1.687
+    W2DSADD$1        1.451       1.580       1.646       1.992       2.337       2.403       2.532
+    W2DBLUED$1       1.248       1.366       1.426       1.739       2.052       2.112       2.229
+    W2DDEPD$1        1.455       1.621       1.706       2.151       2.596       2.681       2.847
+
+Categorical Latent Variables
+
+ ETAC2#1  ON
+    ETAC1#1          1.193       1.366       1.454       1.917       2.380       2.468       2.642
+
+ Means
+    ETAC1#1         -0.669      -0.565      -0.512      -0.234       0.044       0.097       0.201
+    ETAC2#1         -1.658      -1.543      -1.484      -1.177      -0.870      -0.811      -0.696
+
+
+CONFIDENCE INTERVALS IN PROBABILITY SCALE
+
+Latent Class Pattern 1 1
+
+ W1DBOTHD
+    Category 1       0.300       0.320       0.330       0.383       0.436       0.447       0.466
+    Category 2       0.534       0.553       0.564       0.617       0.670       0.680       0.700
+ W1DSADD
+    Category 1       0.206       0.228       0.239       0.297       0.354       0.365       0.387
+    Category 2       0.613       0.635       0.646       0.703       0.761       0.772       0.794
+ W1DBLUED
+    Category 1       0.212       0.231       0.241       0.293       0.344       0.354       0.373
+    Category 2       0.627       0.646       0.656       0.707       0.759       0.769       0.788
+ W1DDEPD
+    Category 1       0.137       0.158       0.170       0.228       0.287       0.298       0.320
+    Category 2       0.680       0.702       0.713       0.772       0.830       0.842       0.863
+ W2DBOTHD
+    Category 1       0.300       0.320       0.330       0.383       0.436       0.447       0.466
+    Category 2       0.534       0.553       0.564       0.617       0.670       0.680       0.700
+ W2DSADD
+    Category 1       0.206       0.228       0.239       0.297       0.354       0.365       0.387
+    Category 2       0.613       0.635       0.646       0.703       0.761       0.772       0.794
+ W2DBLUED
+    Category 1       0.212       0.231       0.241       0.293       0.344       0.354       0.373
+    Category 2       0.627       0.646       0.656       0.707       0.759       0.769       0.788
+ W2DDEPD
+    Category 1       0.137       0.158       0.170       0.228       0.287       0.298       0.320
+    Category 2       0.680       0.702       0.713       0.772       0.830       0.842       0.863
+
+Latent Class Pattern 1 2
+
+ W1DBOTHD
+    Category 1       0.300       0.320       0.330       0.383       0.436       0.447       0.466
+    Category 2       0.534       0.553       0.564       0.617       0.670       0.680       0.700
+ W1DSADD
+    Category 1       0.206       0.228       0.239       0.297       0.354       0.365       0.387
+    Category 2       0.613       0.635       0.646       0.703       0.761       0.772       0.794
+ W1DBLUED
+    Category 1       0.212       0.231       0.241       0.293       0.344       0.354       0.373
+    Category 2       0.627       0.646       0.656       0.707       0.759       0.769       0.788
+ W1DDEPD
+    Category 1       0.137       0.158       0.170       0.228       0.287       0.298       0.320
+    Category 2       0.680       0.702       0.713       0.772       0.830       0.842       0.863
+ W2DBOTHD
+    Category 1       0.736       0.750       0.756       0.793       0.829       0.836       0.850
+    Category 2       0.150       0.164       0.171       0.207       0.244       0.250       0.264
+ W2DSADD
+    Category 1       0.823       0.836       0.843       0.880       0.916       0.923       0.937
+    Category 2       0.063       0.077       0.084       0.120       0.157       0.164       0.177
+ W2DBLUED
+    Category 1       0.788       0.803       0.811       0.851       0.890       0.898       0.913
+    Category 2       0.087       0.102       0.110       0.149       0.189       0.197       0.212
+ W2DDEPD
+    Category 1       0.831       0.846       0.854       0.896       0.937       0.945       0.961
+    Category 2       0.039       0.055       0.063       0.104       0.146       0.154       0.169
+
+Latent Class Pattern 2 1
+
+ W1DBOTHD
+    Category 1       0.736       0.750       0.756       0.793       0.829       0.836       0.850
+    Category 2       0.150       0.164       0.171       0.207       0.244       0.250       0.264
+ W1DSADD
+    Category 1       0.823       0.836       0.843       0.880       0.916       0.923       0.937
+    Category 2       0.063       0.077       0.084       0.120       0.157       0.164       0.177
+ W1DBLUED
+    Category 1       0.788       0.803       0.811       0.851       0.890       0.898       0.913
+    Category 2       0.087       0.102       0.110       0.149       0.189       0.197       0.212
+ W1DDEPD
+    Category 1       0.831       0.846       0.854       0.896       0.937       0.945       0.961
+    Category 2       0.039       0.055       0.063       0.104       0.146       0.154       0.169
+ W2DBOTHD
+    Category 1       0.300       0.320       0.330       0.383       0.436       0.447       0.466
+    Category 2       0.534       0.553       0.564       0.617       0.670       0.680       0.700
+ W2DSADD
+    Category 1       0.206       0.228       0.239       0.297       0.354       0.365       0.387
+    Category 2       0.613       0.635       0.646       0.703       0.761       0.772       0.794
+ W2DBLUED
+    Category 1       0.212       0.231       0.241       0.293       0.344       0.354       0.373
+    Category 2       0.627       0.646       0.656       0.707       0.759       0.769       0.788
+ W2DDEPD
+    Category 1       0.137       0.158       0.170       0.228       0.287       0.298       0.320
+    Category 2       0.680       0.702       0.713       0.772       0.830       0.842       0.863
+
+Latent Class Pattern 2 2
+
+ W1DBOTHD
+    Category 1       0.736       0.750       0.756       0.793       0.829       0.836       0.850
+    Category 2       0.150       0.164       0.171       0.207       0.244       0.250       0.264
+ W1DSADD
+    Category 1       0.823       0.836       0.843       0.880       0.916       0.923       0.937
+    Category 2       0.063       0.077       0.084       0.120       0.157       0.164       0.177
+ W1DBLUED
+    Category 1       0.788       0.803       0.811       0.851       0.890       0.898       0.913
+    Category 2       0.087       0.102       0.110       0.149       0.189       0.197       0.212
+ W1DDEPD
+    Category 1       0.831       0.846       0.854       0.896       0.937       0.945       0.961
+    Category 2       0.039       0.055       0.063       0.104       0.146       0.154       0.169
+ W2DBOTHD
+    Category 1       0.736       0.750       0.756       0.793       0.829       0.836       0.850
+    Category 2       0.150       0.164       0.171       0.207       0.244       0.250       0.264
+ W2DSADD
+    Category 1       0.823       0.836       0.843       0.880       0.916       0.923       0.937
+    Category 2       0.063       0.077       0.084       0.120       0.157       0.164       0.177
+ W2DBLUED
+    Category 1       0.788       0.803       0.811       0.851       0.890       0.898       0.913
+    Category 2       0.087       0.102       0.110       0.149       0.189       0.197       0.212
+ W2DDEPD
+    Category 1       0.831       0.846       0.854       0.896       0.937       0.945       0.961
+    Category 2       0.039       0.055       0.063       0.104       0.146       0.154       0.169
+
+
+CONFIDENCE INTERVALS FOR THE LATENT CLASS ODDS RATIO RESULTS
+
+Latent Class Pattern 1 1 Compared to Latent Class Pattern 1 2
+
+ W1DBOTHD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W1DSADD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W1DBLUED
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W1DDEPD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W2DBOTHD
+    Category > 1     3.919       4.366       4.614       6.157       8.216       8.682       9.672
+ W2DSADD
+    Category > 1     9.914      11.338      12.144      17.382      24.880      26.649      30.478
+ W2DBLUED
+    Category > 1     8.259       9.331       9.933      13.761      19.066      20.294      22.929
+ W2DDEPD
+    Category > 1    14.617      17.230      18.742      29.081      45.124      49.085      57.859
+
+Latent Class Pattern 1 1 Compared to Latent Class Pattern 2 1
+
+ W1DBOTHD
+    Category > 1     3.919       4.366       4.614       6.157       8.216       8.682       9.672
+ W1DSADD
+    Category > 1     9.914      11.338      12.144      17.382      24.880      26.649      30.478
+ W1DBLUED
+    Category > 1     8.259       9.331       9.933      13.761      19.066      20.294      22.929
+ W1DDEPD
+    Category > 1    14.617      17.230      18.742      29.081      45.124      49.085      57.859
+ W2DBOTHD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W2DSADD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W2DBLUED
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W2DDEPD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+
+Latent Class Pattern 1 1 Compared to Latent Class Pattern 2 2
+
+ W1DBOTHD
+    Category > 1     3.919       4.366       4.614       6.157       8.216       8.682       9.672
+ W1DSADD
+    Category > 1     9.914      11.338      12.144      17.382      24.880      26.649      30.478
+ W1DBLUED
+    Category > 1     8.259       9.331       9.933      13.761      19.066      20.294      22.929
+ W1DDEPD
+    Category > 1    14.617      17.230      18.742      29.081      45.124      49.085      57.859
+ W2DBOTHD
+    Category > 1     3.919       4.366       4.614       6.157       8.216       8.682       9.672
+ W2DSADD
+    Category > 1     9.914      11.338      12.144      17.382      24.880      26.649      30.478
+ W2DBLUED
+    Category > 1     8.259       9.331       9.933      13.761      19.066      20.294      22.929
+ W2DDEPD
+    Category > 1    14.617      17.230      18.742      29.081      45.124      49.085      57.859
+
+Latent Class Pattern 1 2 Compared to Latent Class Pattern 2 1
+
+ W1DBOTHD
+    Category > 1     3.919       4.366       4.614       6.157       8.216       8.682       9.672
+ W1DSADD
+    Category > 1     9.914      11.338      12.144      17.382      24.880      26.649      30.478
+ W1DBLUED
+    Category > 1     8.259       9.331       9.933      13.761      19.066      20.294      22.929
+ W1DDEPD
+    Category > 1    14.617      17.230      18.742      29.081      45.124      49.085      57.859
+ W2DBOTHD
+    Category > 1     0.103       0.115       0.122       0.162       0.217       0.229       0.255
+ W2DSADD
+    Category > 1     0.033       0.038       0.040       0.058       0.082       0.088       0.101
+ W2DBLUED
+    Category > 1     0.044       0.049       0.052       0.073       0.101       0.107       0.121
+ W2DDEPD
+    Category > 1     0.017       0.020       0.022       0.034       0.053       0.058       0.068
+
+Latent Class Pattern 1 2 Compared to Latent Class Pattern 2 2
+
+ W1DBOTHD
+    Category > 1     3.919       4.366       4.614       6.157       8.216       8.682       9.672
+ W1DSADD
+    Category > 1     9.914      11.338      12.144      17.382      24.880      26.649      30.478
+ W1DBLUED
+    Category > 1     8.259       9.331       9.933      13.761      19.066      20.294      22.929
+ W1DDEPD
+    Category > 1    14.617      17.230      18.742      29.081      45.124      49.085      57.859
+ W2DBOTHD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W2DSADD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W2DBLUED
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W2DDEPD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+
+Latent Class Pattern 2 1 Compared to Latent Class Pattern 2 2
+
+ W1DBOTHD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W1DSADD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W1DBLUED
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W1DDEPD
+    Category > 1     1.000       1.000       1.000       1.000       1.000       1.000       1.000
+ W2DBOTHD
+    Category > 1     3.919       4.366       4.614       6.157       8.216       8.682       9.672
+ W2DSADD
+    Category > 1     9.914      11.338      12.144      17.382      24.880      26.649      30.478
+ W2DBLUED
+    Category > 1     8.259       9.331       9.933      13.761      19.066      20.294      22.929
+ W2DDEPD
+    Category > 1    14.617      17.230      18.742      29.081      45.124      49.085      57.859
+
+
+     Beginning Time:  16:17:21
+        Ending Time:  16:17:22
+       Elapsed Time:  00:00:01
+
+
+
+MUTHEN & MUTHEN
+3463 Stoner Ave.
+Los Angeles, CA  90066
+
+Tel: (310) 391-9971
+Fax: (310) 391-8971
+Web: www.StatModel.com
+Support: Support@StatModel.com
+
+Copyright (c) 1998-2015 Muthen & Muthen
